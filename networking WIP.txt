@@ -1,0 +1,301 @@
+//client:
+struct Controls {
+  bool fwd;   // vv
+  bool back;  // these 4 only of internal interest
+  bool left;
+  bool right; // ^^
+  bool fire;
+  bool grab;
+} controls;
+
+//client to server
+//when in lobby:
+void send_lobby_info(Connection *c) {
+  if (c) {
+    c->send('n'); //team and name
+  	c->send(team);
+    c->send_raw(nickname, NICKNAME_LENGTH); //NICKNAME_LENGTH is constant, nickname should be padded if necessary
+  }
+}
+
+void send_start(Connection *c) {
+  if (c) {
+  	c->send('k'); //ok to start game
+  }
+}
+//when in game:
+void send_action(Connection *c) {
+  if (c) {
+    c->send('p'); //player update
+    //send player ID? or use sockets completely?
+    //movement
+  	c->send(pos.x);
+    c->send(pos.y);
+    c->send(pos.z);
+    c->send(vel.x);
+    c->send(vel.y);
+    c->send(vel.z);
+    c->send(rot.q1);
+    c->send(rot.q2);
+    c->send(rot.q3);
+    c->send(rot.q4);
+    
+    c->send(fire);
+    c->send(grab);
+  }
+}
+
+//client update: read input, update player state
+
+//server:
+//server to client
+//when starting game:
+void send_begin(Connection *c, GameState *state, int player_id) {
+  if (c) {
+    c->send('b'); //begin game
+    c->send(state->player_count);
+    c->send(player_id); //what is the client's player ID?
+    
+    c->send('t'); //team info
+    for (int i = 0, i < state->player_count, i++) {
+      c->send(state->players[i].team); //each player ID's team
+    }
+  }
+}
+//when in game:
+void send_state(Connection *c, GameState *state, int player_id) {
+	if (c) {
+    c->send('s'); //state update
+    // is_shot + player_count * (pos + vel + quat + is_fires + harpoon_pos + harpoon_vel) + treasure_pos + is_held_by 
+    // (player_count + 1) * bool + (3 * treasure_count + player_count * 13) * float + treasure_count * int
+    
+    bool is_shot = state->players[player_id].is_shot(); //whether the player is stunned by a harpoon
+    c->send(is_shot);
+    
+    //players
+    for (int i = 0, i < state->player_count, i++) {
+      vec3 pos = state->players[i].position;
+      vec3 vel = state->players[i].velocity;
+      quat rot = state->players[i].orientation;
+      c->send(pos.x);
+      c->send(pos.y);
+      c->send(pos.z);
+      c->send(vel.x);
+      c->send(vel.y);
+      c->send(vel.z);
+      c->send(rot.q1);
+      c->send(rot.q2);
+      c->send(rot.q3);
+      c->send(rot.q4);
+      
+      //harpoon
+      if (players[i].firing) {
+        c->send(true); //harpoon is fired
+        
+        vec3 harpoon_pos = state.harpoons[i].pos;
+        vec3 harpoon_vel = state.harpoons[i].vel;
+        //rotation can be determined from velocity so don't send that
+        c->send(pos.x);
+        c->send(pos.y);
+        c->send(pos.z);
+        c->send(vel.x);
+        c->send(vel.y);
+        c->send(vel.z);
+        
+        //harpoon collision happens serverside only- if player and harpoon from different team are too close, that player is shot and the harpoon stops
+        //stopped harpoons (after hitting land or player) don't hit anything
+        //do retracting harpoons count as hitting things? (god of war)
+      }
+      else {
+        c->send(false); //harpoon isn't fired
+        c->send(0);
+        c->send(0);
+        c->send(0);
+        c->send(0);
+        c->send(0);
+        c->send(0);
+      }
+  	}
+    // treasure
+    for (int i = 0; i < 2; i++) {
+      vec3 pos = treasure[i].pos;
+      int is_held_by = is_holding(players, treasure[i]);  //is_holding checks which player owns the treasure 
+      c->send(pos.x);
+ 			c->send(pos.y);
+      c->send(pos.z);
+      c->send(is_held_by);
+    }
+  }
+}
+
+struct GameState {
+  int player_count;
+  std::unordered_map<uint32_t, uint32_t> ready_to_start;
+  std::unordered_map<uint32_t, player> players;
+  std::unordered_map<uint32_t, glm::vec3> harpoons;
+  glm::vec3 treasure_1_loc;
+  glm::vec3 treasure_2_loc;
+} state;
+
+struct Player {
+   glm::vec3 position;
+   glm::vec3 velocity;
+   glm::quat orientation;
+   int team;
+   bool has_treasure_1;
+   bool has_treasure_2;
+   bool is_shot;
+   bool shot_harpoon;
+   bool grab;
+   std::string nickname;
+};
+
+struct Harpoon {
+  int player_id; //who fired it- can this just be determined from index in list?
+  //int team; //can be determined from player_id
+  int state; //0: held, 1: firing, 2: landed, 3: retracting
+  glm::vec3 position; //used when firing, landed, retracting
+  glm::vec3 velocity; //used when firing, retracting
+}
+
+std::unordered_map< Connection *, player_id > player_ledger;
+
+/* add to server "update"
+// check if player_count == 
+uint32_t sum = 0;
+for (auto entry : ready_to_start){
+	sum += entry->second;
+}
+if (sum == player_count){
+	ok_to_start_game = true;
+}
+*/
+
+server.poll([&](Connection *c, Connection::Event evt){
+  if (evt == Connection::OnOpen) {
+    player_ledger.insert(make_pair(c, player_count));
+    player_count++;
+  } else if (evt == Connection::OnClose) {
+    //lost connection with player :(
+  } else { assert(evt == Connection::OnRecv);
+    uint32_t player_id = player_ledger.find(c)->second;// get player ID corresponding to connection
+    Player* player_data = &state.players.find(player_id);
+    if (c->recv_buffer[0] == 'k') {
+      c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1);
+      ready_to_start.insert(make_pair(player_id, 1));
+    } else if (c->recv_buffer[0] == 'n') {
+      if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
+        return; //wait for more data      
+      } else {
+        memcpy(player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
+        memcpy(player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * NICKNAME_LENGTH);
+        c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * NICKNAME_LENGTH);
+      }
+    } else if (c->recv_buffer[0] == 'p') {
+      if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
+        return; //wait for more data
+      } else {
+        /* vv relocate to server "update"
+        // assert((!has_tr_1 && !has_tr_2) || (has_tr_1 != has_tr_2)); // want to enforce {has neither treasure} or {can have one of two treasures}
+				*/
+        memcpy(player_data->position->x, c->recv_buffer.data() + 1 + 0 * sizeof(float), sizeof(float));
+        memcpy(player_data->position->y, c->recv_buffer.data() + 1 + 1 * sizeof(float), sizeof(float));
+        memcpy(player_data->position->z, c->recv_buffer.data() + 1 + 2 * sizeof(float), sizeof(float));
+        memcpy(player_data->velocity->x, c->recv_buffer.data() + 1 + 3 * sizeof(float), sizeof(float));
+        memcpy(player_data->velocity->y, c->recv_buffer.data() + 1 + 4 * sizeof(float), sizeof(float));
+        memcpy(player_data->velocity->z, c->recv_buffer.data() + 1 + 5 * sizeof(float), sizeof(float));
+        memcpy(player_data->orientation->x, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
+        memcpy(player_data->orientation->y, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
+        memcpy(player_data->orientation->z, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
+        memcpy(player_data->orientation->w, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
+        memcpy(player_data->shot_harpoon, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
+        memcpy(player_data->grab, 			  c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
+
+        c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
+      }
+    }
+  }
+}, 0.01);
+
+
+// vv  client stuff below  vv
+
+client.poll([&](Connection *c, Connection::Event event) {
+    if (event == Connection::OnOpen) {
+      //probably won't get this.
+    }
+    else if (event == Connection::OnClose) {
+      std::cerr << "Lost connection to server." << std::endl;
+    }
+    else {
+      while (!(c->recv_buffer.empty())) {
+      assert(event == Connection::OnRecv);
+      // game begins
+      if (c->recv_buffer[0] == 'b') {
+        if (c->recv_buffer.size() < 1 + 2 * sizeof(int)) {
+          return; //wait for more data
+        }
+        else {
+       	  std::cout << "Enter the lobby." << std::endl;
+          memcpy(&state.player_count , c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
+          memcpy(&player.team, c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(int));
+          c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 2 * sizeof(int));
+        }
+      }
+      // receive info about other players
+      else if (c->recv_buffer[0] == 't') {
+        if (c->recv_buffer.size() < 1 + player_count * sizeof(int)) {
+          return; //wait for more data
+        }
+        else {
+        	std::cout << "receving the info about other players" << set::endl;
+					for (int i = 0; i < player_count; i++) {
+            memcpy(&state.players[i].team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
+          }
+
+          c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * sizeof(int));
+        }
+        
+      }
+      
+      // in game
+      else {
+        assert(c->recv_buffer[0] == 's');
+        if (c->recv_buffer.size() < 1 + (player_count + 1) * sizeof(bool) + (3 + player_count) * sizeof(float) + 1*sizeof(int)) {
+          return; //wait for more data
+        }
+        else {
+        	//TODO: if buffer length is more than twice the length of a full update, skip all but the last one
+          memcpy(&player.is_shot, c->recv_buffer.data() + 1 + 0 * sizeof(bool) + 0 * sizeof(float) + 0 * sizeof(int), sizeof(bool));
+          // update the players and the harpoons
+          for (int i = 0; i < player_count; i++) {
+            memcpy(&players[i].pos.x, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 0) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].pos.y, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 1) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].pos.z, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 2) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].vel.x, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 3) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].vel.y, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 4) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].vel.z, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 5) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+					  memcpy(&players[i].rot.q1, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 6) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].rot.q2, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 7) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].rot.q3, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 8) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&players[i].rot.q4, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 9) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+          
+            memcpy(&players[i].is_firing, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 10) * sizeof(float) + 0 * sizeof(int), sizeof(bool));
+            memcpy(&state.harpoons[i].pos.x, c->recv_buffer.data() + 1 + (2 + i) * sizeof(bool) + (i * 13 + 10) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&state.harpoons[i].pos.y, c->recv_buffer.data() + 1 + (2 + i) * sizeof(bool) + (i * 13 + 11) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+            memcpy(&state.harpoons[i].pos.z, c->recv_buffer.data() + 1 + (2 + i) * sizeof(bool) + (i * 13 + 12) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+          }
+        	// update treasure pos and state
+          for (int j = 0; j < 2; j++) {
+            memcpy(&state.treasure[i].pos.x, c->recv_buffer.data() + 1 + (1 + player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 0) * sizeof(float) + j * sizeof(int), sizeof(float));
+            memcpy(&state.treasure[i].pos.y, c->recv_buffer.data() + 1 + (1 + player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 1) * sizeof(float) + j * sizeof(int), sizeof(float));
+            memcpy(&state.treasure[i].pos.z, c->recv_buffer.data() + 1 + (1 + player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 2) * sizeof(float) + j * sizeof(int), sizeof(float));
+            memcpy(&state.treasure[i].held_by, c->recv_buffer.data() + 1 + (1 + player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 2) * sizeof(float) + j * sizeof(int), sizeof(int));
+          }
+        	// (player_count + 1) * bool + (3 * treasure_count + player_count * 13) * float + treasure_count * int
+          c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + (player_count + 1) * sizeof(bool) + (6 + player_count * 13) * sizeof(float) + 2 * sizeof(int);
+        }
+      }
+    }
+  }
+});
