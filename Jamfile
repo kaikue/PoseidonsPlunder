@@ -60,9 +60,11 @@ NAMES =
 	data_path
 	compile_program
 	vertex_color_program
+	texture_program
+	load_save_png
+	depth_program
 	Scene
 	Mode
-	GameMode
 	MainMode
 	MenuMode
 	Load
