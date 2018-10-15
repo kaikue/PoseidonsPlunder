@@ -2,16 +2,9 @@
 
 #include <glm/glm.hpp>
 
-struct GameState {
-  int player_count;
-  std::unordered_map<uint32_t, uint32_t> ready_to_start;
-  std::unordered_map<uint32_t, player> players;
-  std::unordered_map<uint32_t, glm::vec3> harpoons;
-  glm::vec3 treasure_1_loc;
-  glm::vec3 treasure_2_loc;
+#include <glm/gtc/type_ptr.hpp>
 
-  void update(float time);
-}
+#include <unordered_map>
 
 struct Player {
   glm::vec3 position;
@@ -32,5 +25,15 @@ struct Harpoon {
   int state; //0: held, 1: firing, 2: landed, 3: retracting
   glm::vec3 position; //used when firing, landed, retracting
   glm::vec3 velocity; //used when firing, retracting
-}
+};
 
+struct GameState {
+  int player_count;
+  std::unordered_map<uint32_t, uint32_t> ready_to_start;
+  std::unordered_map<uint32_t, Player> players;
+  std::unordered_map<uint32_t, glm::vec3> harpoons;
+  glm::vec3 treasure_1_loc;
+  glm::vec3 treasure_2_loc;
+
+  void update(float time);
+};

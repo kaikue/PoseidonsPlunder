@@ -44,6 +44,8 @@ struct GameMode : public Mode {
     bool grab;
   } controls;
 
+  Player player;
+
 	//------ networking ------
 	Client &client; //client object; manages connection to server.
 };

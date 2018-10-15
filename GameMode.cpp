@@ -208,6 +208,11 @@ void send_action(Connection *c) {
     c->send('p'); //player update
                   //send player ID? or use sockets completely?
                   //movement
+
+    glm::vec3 pos = player.position;
+    glm::vec3 vel = player.velocity;
+    glm::quat rot = player.orientation;
+
     c->send(pos.x);
     c->send(pos.y);
     c->send(pos.z);
@@ -219,8 +224,8 @@ void send_action(Connection *c) {
     c->send(rot.q3);
     c->send(rot.q4);
 
-    c->send(fire);
-    c->send(grab);
+    c->send(controls.fire);
+    c->send(controls.grab);
   }
 }
 
