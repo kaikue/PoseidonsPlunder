@@ -66,7 +66,7 @@ GameState::GameState() {
 
 void GameState::add_player(uint32_t id) {
     glm::vec3 player_up = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::vec3 player_at = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 player_at = glm::vec3(0.0f, -14.0f, 2.0f);
     glm::vec3 player_right = glm::vec3(1.0f, 0.0f, 0.0f);
 
     float elev_offset = std::atan2f(
@@ -76,15 +76,20 @@ void GameState::add_player(uint32_t id) {
     glm::vec3 position = player_at;
     glm::quat rotation = glm::angleAxis(elev_offset + float(M_PI_2), player_right);
 
-    auto *object = new btCollisionObject();
-    object->setWorldTransform(
-            btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-                        btVector3(position.x, position.y, position.z)));
-    auto *sphere = new btSphereShape(player_sphere_radius);
-    object->setCollisionShape(sphere);
-    bt_collision_world->addCollisionObject(object);
+    // add player collision mesh
+    {
+        auto *object = new btCollisionObject();
+        object->setWorldTransform(
+                btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                            btVector3(position.x, position.y, position.z)));
+        auto *sphere = new btSphereShape(player_sphere_radius);
+        object->setCollisionShape(sphere);
+        object->setUserIndex(id);
+        bt_collision_world->addCollisionObject(object);
 
-    player_collisions[id] = object;
+        player_collisions[id] = object;
+    }
+
     players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test"};
 }
 
@@ -93,32 +98,62 @@ void GameState::update(float time) {
     for (auto const &pair : player_collisions) {
         glm::vec3 position = players.at(pair.first).position;
         glm::quat rotation = players.at(pair.first).orientation;
+
         pair.second->setWorldTransform(
                 btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                             btVector3(position.x, position.y, position.z)));
 
-        std::cout << "player position: " << glm::to_string(position) << std::endl;
+//        std::cout << "player position: " << glm::to_string(position) << std::endl;
     }
 
     //Perform collision detection
     bt_collision_world->performDiscreteCollisionDetection();
 
     int numManifolds = bt_collision_world->getDispatcher()->getNumManifolds();
-//For each contact manifold
+    //For each contact manifold
     for (int i = 0; i < numManifolds; i++) {
-        btPersistentManifold* contactManifold = bt_collision_world->getDispatcher()->getManifoldByIndexInternal(i);
-        const btCollisionObject* obA = contactManifold->getBody0();
-        const btCollisionObject* obB = contactManifold->getBody1();
+        btPersistentManifold *contactManifold = bt_collision_world->getDispatcher()->getManifoldByIndexInternal(i);
+        const btCollisionObject *obA = contactManifold->getBody0();
+        const btCollisionObject *obB = contactManifold->getBody1();
         contactManifold->refreshContactPoints(obA->getWorldTransform(), obB->getWorldTransform());
         int numContacts = contactManifold->getNumContacts();
+
+        uint32_t collision_player_id;
+        const btCollisionObject * player_obj;
+        bool player_is_A;
+
+        if (players.find(obA->getUserIndex()) != players.end()) {
+            collision_player_id = obA->getUserIndex();
+            player_obj = obA;
+            player_is_A = true;
+        } else if (players.find(obB->getUserIndex()) != players.end()) {
+            collision_player_id = obB->getUserIndex();
+            player_obj = obB;
+            player_is_A = false;
+        } else {
+            continue;
+        }
+
         //For each contact point in that manifold
         for (int j = 0; j < numContacts; j++) {
             //Get the contact information
-            btManifoldPoint& pt = contactManifold->getContactPoint(j);
+            btManifoldPoint &pt = contactManifold->getContactPoint(j);
             btVector3 ptA = pt.getPositionWorldOnA();
             btVector3 ptB = pt.getPositionWorldOnB();
             double ptdist = pt.getDistance();
-            std::cout << ptA.x() << ", " << ptA.y() << ", " << ptA.z() << ", " << ptB << ", " << ptdist << std::endl;
+            btVector3 rebound_vec;
+
+            if (player_is_A) {
+                rebound_vec = (ptA - ptB) * ((ptdist > 0) - (ptdist < 0));
+            } else {
+                rebound_vec = (ptB - ptA) * ((ptdist > 0) - (ptdist < 0));
+            }
+
+//            std::cout << "before collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+            players.at(collision_player_id).position += glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
+//            std::cout << rebound_vec.x() << ", " << rebound_vec.y() << ", " << rebound_vec.z() << std::endl;
+//            std::cout << "after collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+
         }
     }
 }

@@ -38,16 +38,12 @@ struct MainMode : public Mode {
 
     GameState state;
 
-    struct {
-        bool forward = false;
-        bool backward = false;
-        bool left = false;
-        bool right = false;
-    } controls;
+    Controls controls;
 
     bool mouse_captured = false;
 
     glm::vec3 player_at, player_up, player_right;
+    static constexpr float player_to_camera_offset = 0.8f;
     float azimuth, elevation = float(M_PI_2);
     float elev_offset;
 };

@@ -95,7 +95,7 @@ MainMode::MainMode() : state() {
             std::sqrtf(player_up.x * player_up.x + player_up.y * player_up.y),
             player_up.z);
 
-    camera->transform->position = player_at + 0.8f * player_up;
+    camera->transform->position = player_at + player_to_camera_offset * player_up;
     camera->transform->rotation = state.players.at(0).orientation;
 }
 
@@ -110,10 +110,10 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
     //handle tracking the state of WSAD for movement control:
     if (evt.type == SDL_KEYDOWN || evt.type == SDL_KEYUP) {
         if (evt.key.keysym.scancode == SDL_SCANCODE_W) {
-            controls.forward = (evt.type == SDL_KEYDOWN);
+            controls.fwd = (evt.type == SDL_KEYDOWN);
             return true;
         } else if (evt.key.keysym.scancode == SDL_SCANCODE_S) {
-            controls.backward = (evt.type == SDL_KEYDOWN);
+            controls.back = (evt.type == SDL_KEYDOWN);
             return true;
         } else if (evt.key.keysym.scancode == SDL_SCANCODE_A) {
             controls.left = (evt.type == SDL_KEYDOWN);
@@ -138,6 +138,14 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             show_pause_menu();
             return true;
         }
+        if (evt.type == SDL_MOUSEBUTTONDOWN) {
+            controls.fire = true;
+            return true;
+        }
+        if (evt.type == SDL_MOUSEBUTTONUP) {
+            controls.fire = false;
+            return true;
+        }
         if (evt.type == SDL_MOUSEMOTION) {
             // Note: float(window_size.y) * camera->fovy is a pixels-to-radians
             // conversion factor
@@ -158,15 +166,18 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 void MainMode::update(float elapsed) {
     glm::mat3 directions = glm::mat3_cast(camera->transform->rotation);
     float amt = 5.0f * elapsed;
-    if (controls.right) camera->transform->position += amt * directions[0];
-    if (controls.left) camera->transform->position -= amt * directions[0];
-    if (controls.backward) camera->transform->position += amt * directions[2];
-    if (controls.forward) camera->transform->position -= amt * directions[2];
+    if (controls.right) player_at += amt * directions[0];
+    if (controls.left) player_at -= amt * directions[0];
+    if (controls.back) player_at += amt * directions[2];
+    if (controls.fwd) player_at -= amt * directions[2];
+    if (controls.fire) state.player_controls.at(0).fire = true;
 
-    player_at = camera->transform->position - 0.8f * player_up;
     state.players.at(0).position = player_at;
 
     state.update(elapsed);
+
+    player_at = state.players.at(0).position;
+    camera->transform->position = player_at + player_to_camera_offset * player_up;
 }
 
 void MainMode::draw(glm::uvec2 const &drawable_size) {

@@ -32,6 +32,15 @@ struct Harpoon {
     glm::vec3 velocity; //used when firing, retracting
 };
 
+struct Controls {
+    bool fwd = false;   // vv
+    bool back = false;  // these 4 only of internal interest
+    bool left = false;
+    bool right = false; // ^^
+    bool fire = false;
+    bool grab = false;
+};
+
 struct CollisionMeshBuffer {
     std::vector<glm::uvec3> triangles;
     std::vector<glm::vec3> vertices;
@@ -112,6 +121,7 @@ public:
     int player_count;
     std::unordered_map<uint32_t, uint32_t> ready_to_start;
     std::unordered_map<uint32_t, Player> players;
+    std::unordered_map<uint32_t, Controls> player_controls;
     std::unordered_map<uint32_t, glm::vec3> harpoons;
     glm::vec3 treasure_1_loc;
     glm::vec3 treasure_2_loc;
