@@ -50,6 +50,8 @@ struct GameMode : public Mode {
 
   Player player;
 
+  bool mouse_captured = false;
+
 	//------ networking ------
 	Client &client; //client object; manages connection to server.
 };

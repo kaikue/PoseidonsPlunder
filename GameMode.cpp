@@ -133,7 +133,7 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
   }
 
   //shoot harpoon
-  if (evt.type == SDL_MOUSEBUTTONDOWN && evt.button == SDL_BUTTON_LEFT) {
+  if (evt.type == SDL_MOUSEBUTTONDOWN && evt.button.button == SDL_BUTTON_LEFT) {
     controls.fire = true;
     return true;
   }
@@ -157,9 +157,9 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
   }
   else if (mouse_captured) {
     if (evt.type == SDL_KEYDOWN && evt.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-      //SDL_SetRelativeMouseMode(SDL_FALSE);
-      //mouse_captured = false;
-      show_pause_menu();
+      SDL_SetRelativeMouseMode(SDL_FALSE);
+      mouse_captured = false;
+      //show_pause_menu();
       return true;
     }
     if (evt.type == SDL_MOUSEMOTION) {
@@ -221,10 +221,10 @@ void GameMode::send_action(Connection *c) {
     c->send(vel.x);
     c->send(vel.y);
     c->send(vel.z);
-    c->send(rot.q1);
-    c->send(rot.q2);
-    c->send(rot.q3);
-    c->send(rot.q4);
+    c->send(rot.w);
+    c->send(rot.x);
+    c->send(rot.y);
+    c->send(rot.z);
 
     c->send(controls.fire);
     c->send(controls.grab);
@@ -304,7 +304,7 @@ void GameMode::poll_server() {
               memcpy(&state.treasure[i].held_by, c->recv_buffer.data() + 1 + (1 + player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 2) * sizeof(float) + j * sizeof(int), sizeof(int));
             }
             // (player_count + 1) * bool + (3 * treasure_count + player_count * 13) * float + treasure_count * int
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + (player_count + 1) * sizeof(bool) + (6 + player_count * 13) * sizeof(float) + 2 * sizeof(int);
+            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + (player_count + 1) * sizeof(bool) + (6 + player_count * 13) * sizeof(float) + 2 * sizeof(int));
           }
         }
       }
