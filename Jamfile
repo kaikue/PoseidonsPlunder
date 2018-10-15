@@ -24,6 +24,7 @@ if $(OS) = NT { #Windows
 		-std=c++14 -g -Wall -Werror
 		-I$(KIT_LIBS)/libpng/include                           #libpng
 		-I$(KIT_LIBS)/glm/include                              #glm
+		-I/usr/local/include/bullet
 		`PATH=$(KIT_LIBS)/SDL2/bin:$PATH sdl2-config --cflags` #SDL2
 		;
 	LINK = clang++ ;
@@ -31,6 +32,7 @@ if $(OS) = NT { #Windows
 	LINKLIBS =
 		-L$(KIT_LIBS)/libpng/lib -lpng                      #libpng
 		-L$(KIT_LIBS)/zlib/lib -lz                          #zlib
+		-lBulletDynamics -lBulletCollision -lLinearMath     #bullet
 		`PATH=$(KIT_LIBS)/SDL2/bin:$PATH sdl2-config --static-libs` -framework OpenGL #SDL2
 		;
 } else if $(OS) = LINUX { #Linux
@@ -67,6 +69,7 @@ NAMES =
 	Mode
 	MainMode
 	MenuMode
+	GameState
 	Load
 	MeshBuffer
 	draw_text

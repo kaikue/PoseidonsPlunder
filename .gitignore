@@ -7,3 +7,5 @@ kit-libs-win
 kit-libs-osx
 kit-libs-linux
 .DS_Store
+.vscode
+.idea
