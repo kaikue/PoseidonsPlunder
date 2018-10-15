@@ -4,8 +4,8 @@
 //Load.hpp is included because of the call_load_functions() call:
 #include "Load.hpp"
 
-//The 'MainMode' mode plays the game:
-#include "MainMode.hpp"
+//The 'GameMode' mode plays the game:
+#include "GameMode.hpp"
 
 //The 'Sound' header has functions for managing sound:
 #include "Sound.hpp"
@@ -30,10 +30,22 @@
 #include <algorithm>
 
 int main(int argc, char **argv) {
+#ifdef _WIN32
+	try {
+#endif
 	struct {
-		std::string title = "Another Infinite Night at the Orbital Phone Bank";
+		//TODO: this is where you set the title and size of your game window
+		std::string title = "Indirect Pong";
 		glm::uvec2 size = glm::uvec2(800, 600);
 	} config;
+
+	//----- start connection to server ----
+	if (argc != 3) {
+		std::cout << "Usage:\n\t./client <host> <port>" << std::endl;
+		return 1;
+	}
+
+	Client client(argv[1], argv[2]);
 
 	//------------  initialization ------------
 
@@ -104,7 +116,7 @@ int main(int argc, char **argv) {
 
 	//------------ create game mode + make current --------------
 
-	Mode::set_current(std::make_shared< MainMode >());
+	Mode::set_current(std::make_shared< GameMode >(client));
 
 	//------------ main loop ------------
 
@@ -186,4 +198,14 @@ int main(int argc, char **argv) {
 	window = NULL;
 
 	return 0;
+
+#ifdef _WIN32
+	} catch (std::exception const &e) {
+		std::cerr << "Unhandled exception:\n" << e.what() << std::endl;
+		return 1;
+	} catch (...) {
+		std::cerr << "Unhandled exception (unknown type)." << std::endl;
+		throw;
+	}
+#endif
 }

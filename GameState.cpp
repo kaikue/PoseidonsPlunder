@@ -1,38 +1,12 @@
-#include "Game.hpp"
+#include "GameState.hpp"
 #include <iostream>
 
-bool Game::check_point(glm::vec2 pt) {
-  glm::vec2 to = ball - pt;
-  float len2 = glm::dot(to, to);
-  if (len2 > BallRadius * BallRadius) return false;
-  //if point is inside ball, make ball velocity outward-going:
-  //float d = glm::dot(ball_velocity, to);
-  //ball_velocity += ((std::abs(d) - d) / len2) * to;
-  ball_velocity = to * (ball_speed / to.length());
-  std::cout << "ballvel: " << ball_velocity.x << " " << ball_velocity.y << std::endl;
-  return true;
-}
+void GameState::update(float time) {
+  //TODO this can be either a clientside or serverside update... might need to change that
 
-void Game::check_score() {
-  if (score1 >= win_score) {
-    won = is_player1;
-    lost = !is_player1;
-  }
-  else if (score2 >= win_score) {
-    won = !is_player1;
-    lost = is_player1;
-  }
-}
+  //should add to positions based on velocities
 
-void Game::reset_ball() {
-  ball.x = 0.0f;
-  ball.y = 0.0f;
-  ball_velocity.x = 0.0f;
-  ball_velocity.y = 0.0f;
-}
-
-void Game::update(float time) {
-  if (won || lost) return;
+  /*if (won || lost) return;
 
   if (fire1) {
     bullet1.x = -bullet_startx;
@@ -71,7 +45,7 @@ void Game::update(float time) {
 	if (ball.y <=-0.5f * FrameHeight + BallRadius) {
 		ball_velocity.y = std::abs(ball_velocity.y);
 	}
-
+  */
 	/*auto do_point = [this](glm::vec2 const &pt) {
 		glm::vec2 to = ball - pt;
 		float len2 = glm::dot(to, to);
@@ -80,7 +54,7 @@ void Game::update(float time) {
 		float d = glm::dot(ball_velocity, to);
 		ball_velocity += ((std::abs(d) - d) / len2) * to;
 	};*/
-
+  /*
   if (check_point(bullet1)) {
     bullet1.x = 0.0f;
     bullet1.y = 10.0f;
@@ -93,7 +67,7 @@ void Game::update(float time) {
     bullet2_velocity.x = 0.0f;
     bullet2_velocity.y = 0.0f;
   }
-
+  */
 	/*auto do_edge = [&](glm::vec2 const &a, glm::vec2 const &b) {
 		float along = glm::dot(ball-a, b-a);
 		float max = glm::dot(b-a,b-a);
