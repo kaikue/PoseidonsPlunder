@@ -187,6 +187,8 @@ void GameMode::draw_message(std::string message, float y) {
   draw_text(message, glm::vec2(-0.5f * width, y + 0.01f), height, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
 }
 
+//TODO: these should be in a separate LobbyMode
+/*
 //when in lobby:
 void send_lobby_info(Connection *c) {
   if (c) {
@@ -201,9 +203,9 @@ void send_start(Connection *c) {
     c->send('k'); //ok to start game
   }
 }
-
+*/
 //when in game:
-void send_action(Connection *c) {
+void GameMode::send_action(Connection *c) {
   if (c) {
     c->send('p'); //player update
                   //send player ID? or use sockets completely?
@@ -229,7 +231,7 @@ void send_action(Connection *c) {
   }
 }
 
-void poll_server() {
+void GameMode::poll_server() {
   //poll server for current game state
   client.poll([&](Connection *c, Connection::Event event) {
     if (event == Connection::OnOpen) {
@@ -255,15 +257,15 @@ void poll_server() {
         }
         // receive info about other players
         else if (c->recv_buffer[0] == 't') {
-          if (c->recv_buffer.size() < 1 + player_count * sizeof(int)) {
+          if (c->recv_buffer.size() < 1 + state->player_count * sizeof(int)) {
             return; //wait for more data
           }
           else {
-            std::cout << "receving the info about other players" << set::endl;
+            std::cout << "receving the info about other players" << std::endl;
             for (int i = 0; i < player_count; i++) {
               memcpy(&state.players[i].team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
             }
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * sizeof(int));
+            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + state->player_count * sizeof(int));
           }
         }
 

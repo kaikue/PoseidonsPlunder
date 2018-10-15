@@ -13,7 +13,7 @@ void send_begin(Connection *c, GameState *state, int player_id) {
     c->send(player_id);
 
     c->send('t'); //team info
-    for (int i = 0, i < state->player_count, i++) {
+    for (int i = 0; i < state->player_count; i++) {
       c->send(state->players[i].team); //each player ID's team
     }
   }
@@ -26,14 +26,14 @@ void send_state(Connection *c, GameState *state, int player_id) {
                   // is_shot + player_count * (pos + vel + quat + is_fires + harpoon_pos + harpoon_vel) + treasure_pos + is_held_by 
                   // (player_count + 1) * bool + (3 * treasure_count + player_count * 13) * float + treasure_count * int
 
-    bool is_shot = state->players[player_id].is_shot(); //whether the player is stunned by a harpoon
+    bool is_shot = state->players[player_id].is_shot; //whether the player is stunned by a harpoon
     c->send(is_shot);
 
     //players
-    for (int i = 0, i < state->player_count, i++) {
-      vec3 pos = state->players[i].position;
-      vec3 vel = state->players[i].velocity;
-      quat rot = state->players[i].orientation;
+    for (int i = 0; i < state->player_count; i++) {
+      glm::vec3 pos = state->players[i].position;
+      glm::vec3 vel = state->players[i].velocity;
+      glm::quat rot = state->players[i].orientation;
       c->send(pos.x);
       c->send(pos.y);
       c->send(pos.z);
@@ -46,11 +46,12 @@ void send_state(Connection *c, GameState *state, int player_id) {
       c->send(rot.q4);
 
       //harpoon
-      if (players[i].firing) {
+      if (state->players[i].shot_harpoon) {
         c->send(true); //harpoon is fired
+        //TODO: make this use the harpoon state int?
 
-        vec3 harpoon_pos = state.harpoons[i].pos;
-        vec3 harpoon_vel = state.harpoons[i].vel;
+        glm::vec3 harpoon_pos = state->harpoons[i].position;
+        glm::vec3 harpoon_vel = state->harpoons[i].velocity;
         //rotation can be determined from velocity so don't send that
         c->send(pos.x);
         c->send(pos.y);
@@ -74,9 +75,10 @@ void send_state(Connection *c, GameState *state, int player_id) {
       }
     }
     // treasure
+    //TODO
     for (int i = 0; i < 2; i++) {
-      vec3 pos = treasure[i].pos;
-      int is_held_by = is_holding(players, treasure[i]);  //is_holding checks which player owns the treasure 
+      glm::vec3 pos = state->treasure_1_loc; //state->treasure[i].pos;
+      int is_held_by = 0; // is_holding(players, state->treasure[i]);  //is_holding checks which player owns the treasure 
       c->send(pos.x);
       c->send(pos.y);
       c->send(pos.z);
@@ -85,10 +87,15 @@ void send_state(Connection *c, GameState *state, int player_id) {
   }
 }
 
-void update_server(GameState &state, float time) {
-  state->update(diff);
-  send_state(c1, state);
-  send_state(c2, state);
+void update_server(GameState &state, std::unordered_map< Connection *, int > player_ledger, float time) {
+  //TODO: check ready to start, then start game if so
+  //TODO: set state.player_count when starting game
+
+  state.update(time);
+  //TODO: send state to all clients
+  /*for (pair<Connection *, int> p in player_ledger.firsts) {
+    send_state(p.first, state, p.second);
+  }*/
 }
 
 int main(int argc, char **argv) {
@@ -100,9 +107,9 @@ int main(int argc, char **argv) {
 	Server server(argv[1]);
 
 	GameState state;
-  int num_players = 0;
+  int player_count = 0;
 
-  std::unordered_map< Connection *, player_id > player_ledger;
+  std::unordered_map< Connection *, int > player_ledger;
 
   auto then = std::chrono::high_resolution_clock::now();
 
@@ -130,8 +137,8 @@ int main(int argc, char **argv) {
           }
           else {
             memcpy(player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
-            memcpy(player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * NICKNAME_LENGTH);
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * NICKNAME_LENGTH);
+            memcpy(player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * state->NICKNAME_LENGTH);
+            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * state->NICKNAME_LENGTH);
           }
         }
         else if (c->recv_buffer[0] == 'p') {
@@ -167,7 +174,7 @@ int main(int argc, char **argv) {
 		if (diff > 0.05f) {
 			then = now;
 
-      update_server(&state, diff);
+      update_server(&state, &player_ledger, diff);
 		}
 	}
 }

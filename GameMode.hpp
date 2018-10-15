@@ -32,6 +32,10 @@ struct GameMode : public Mode {
 	//draw is called after update:
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
+  void send_action(Connection *c);
+
+  void poll_server();
+
 	//------- game state -------
   GameState state;
 

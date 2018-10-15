@@ -31,9 +31,11 @@ struct GameState {
   int player_count;
   std::unordered_map<uint32_t, uint32_t> ready_to_start;
   std::unordered_map<uint32_t, Player> players;
-  std::unordered_map<uint32_t, glm::vec3> harpoons;
+  std::unordered_map<uint32_t, Harpoon> harpoons;
   glm::vec3 treasure_1_loc;
   glm::vec3 treasure_2_loc;
 
   void update(float time);
+
+  int NICKNAME_LENGTH = 12;
 };
