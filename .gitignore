@@ -5,6 +5,11 @@ dist/main.exe
 dist/SDL2.dll
 dist/client.exe
 dist/server.exe
+dist/client
+dist/server
 kit-libs-win
 kit-libs-osx
 kit-libs-linux
+.DS_Store
+.vscode
+.idea

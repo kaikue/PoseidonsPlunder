@@ -66,22 +66,66 @@ struct Scene {
 		}
 
 		//program info:
-		GLuint program = 0;
-		GLuint program_mvp_mat4 = -1U; //uniform index for object-to-clip matrix (mat4)
-		GLuint program_mv_mat4x3 = -1U; //uniform index for model-to-lighting-space matrix (mat4x3)
-		GLuint program_itmv_mat3 = -1U; //uniform index for normal-to-lighting-space matrix (mat3)
+		enum ProgramType : uint32_t {
+			ProgramTypeDefault = 0,
+			ProgramTypeShadow = 1,
+			ProgramTypes //count of program types
+		};
+		struct ProgramInfo {
+			GLuint program = 0;
 
-		//material info:
-		std::function< void() > set_uniforms; //will be called before rendering object, use to set material parameters (e.g. glossiness)
+			//attributes:
+			GLuint vao = 0;
+			GLuint start = 0;
+			GLuint count = 0;
 
-		//attribute info:
-		GLuint vao = 0;
-		GLuint start = 0;
-		GLuint count = 0;
+			//uniforms:
+			GLuint mvp_mat4 = -1U; //uniform index for object-to-clip matrix (mat4)
+			GLuint mv_mat4x3 = -1U; //uniform index for model-to-lighting-space matrix (mat4x3)
+			GLuint itmv_mat3 = -1U; //uniform index for normal-to-lighting-space matrix (mat3)
+			std::function< void() > set_uniforms; //(optional) function to set additional uniforms
+
+			//textures:
+			enum : uint32_t { TextureCount = 4 };
+			GLuint textures[TextureCount] = {0,0,0,0}; //textures to bind
+		} programs[ProgramTypes];
 
 		//used by Scene to manage allocation:
 		Object **alloc_prev_next = nullptr;
 		Object *alloc_next = nullptr;
+	};
+
+	//"Lamp"s contain information about lights:
+	struct Lamp {
+		Transform *transform; //lamps must be attached to transforms.
+		Lamp(Transform *transform_) : transform(transform_) {
+			assert(transform);
+		}
+		enum Type : char {
+			Point = 'p',
+			Hemisphere = 'h',
+			Spot = 's',
+			Directional = 'd'
+		} type = Point;
+
+		//NOTE: lights are directed along their -z axis
+		glm::vec3 energy = glm::vec3(1.0f);
+
+		float fov = glm::radians(45.0f); //fov (spot)
+
+		//near and far planes for shadow maps:
+		float clip_start = 0.1f;
+		float clip_end = 100.0f;
+
+		//computed from the above:
+		glm::mat4 make_projection() const;
+
+		//computed from the above:
+		glm::mat4 make_spot_projection() const;
+
+		//used by Scene to manage allocation:
+		Lamp **alloc_prev_next = nullptr;
+		Lamp *alloc_next = nullptr;
 	};
 
 	//"Camera"s contain information needed to view a scene:
@@ -117,6 +161,11 @@ struct Scene {
 	//Delete an object:
 	void delete_object(Object *);
 
+	//Create a new lamp attached to a transform:
+	Lamp *new_lamp(Transform *transform);
+	//Delete a lamp:
+	void delete_lamp(Lamp *);
+
 	//Create a new camera attached to a transform:
 	Camera *new_camera(Transform *transform);
 	//Delete a camera:
@@ -125,6 +174,7 @@ struct Scene {
 	//used to manage allocated objects:
 	Transform *first_transform = nullptr;
 	Object *first_object = nullptr;
+	Lamp *first_lamp = nullptr;
 	Camera *first_camera = nullptr;
 	//(you shouldn't be manipulating these pointers directly
 
@@ -132,7 +182,16 @@ struct Scene {
 
 	//Draw the scene from a given camera by computing appropriate matrices and sending all objects to OpenGL:
 	//"camera" must be non-null!
-	void draw(Camera const *camera) const;
+	void draw(Camera const *camera, Object::ProgramType = Object::ProgramTypeDefault ) const;
+
+	//Draw the scene from a given lamp by computing appropriate matrices and sending all objects to OpenGL:
+	//"lamp" must be non-null!
+	void draw(Lamp const *lamp, Object::ProgramType = Object::ProgramTypeDefault ) const;
+
+	//More general draw function. Will render with a specified projection transformation and use programs in the given slot of all objects:
+	void draw(
+		glm::mat4 const &world_to_clip,
+		Object::ProgramType program_type) const;
 
 	~Scene(); //destructor deallocates transforms, objects, cameras
 

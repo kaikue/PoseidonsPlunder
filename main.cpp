@@ -5,7 +5,11 @@
 #include "Load.hpp"
 
 //The 'GameMode' mode plays the game:
-#include "GameMode.hpp"
+// #include "GameMode.hpp"
+
+#include "MainMode.hpp"
+
+#include "Connection.hpp"
 
 //The 'Sound' header has functions for managing sound:
 #include "Sound.hpp"
@@ -45,7 +49,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	Client client(argv[1], argv[2]);
+	// Client client(argv[1], argv[2]);
 
 	//------------  initialization ------------
 
@@ -116,7 +120,8 @@ int main(int argc, char **argv) {
 
 	//------------ create game mode + make current --------------
 
-	Mode::set_current(std::make_shared< GameMode >(client));
+	// Mode::set_current(std::make_shared< GameMode >(client));
+	Mode::set_current(std::make_shared< MainMode >());
 
 	//------------ main loop ------------
 

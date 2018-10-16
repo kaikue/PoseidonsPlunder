@@ -24,6 +24,7 @@ if $(OS) = NT { #Windows
 		-std=c++14 -g -Wall -Werror
 		-I$(KIT_LIBS)/libpng/include                           #libpng
 		-I$(KIT_LIBS)/glm/include                              #glm
+		-I/usr/local/include/bullet
 		`PATH=$(KIT_LIBS)/SDL2/bin:$PATH sdl2-config --cflags` #SDL2
 		;
 	LINK = clang++ ;
@@ -31,6 +32,7 @@ if $(OS) = NT { #Windows
 	LINKLIBS =
 		-L$(KIT_LIBS)/libpng/lib -lpng                      #libpng
 		-L$(KIT_LIBS)/zlib/lib -lz                          #zlib
+		-lBulletDynamics -lBulletCollision -lLinearMath     #bullet
 		`PATH=$(KIT_LIBS)/SDL2/bin:$PATH sdl2-config --static-libs` -framework OpenGL #SDL2
 		;
 } else if $(OS) = LINUX { #Linux
@@ -62,19 +64,22 @@ SERVER_NAMES =
 COMMON_NAMES =
 	Connection
 	GameState
+	Scene
+	data_path
+	Load
 	;
 
 CLIENT_NAMES =
 	load_save_png
 	main
-	data_path
 	compile_program
 	vertex_color_program
-	Scene
+	texture_program
+	depth_program
 	Mode
 	GameMode
+	MainMode
 	MenuMode
-	Load
 	MeshBuffer
 	draw_text
 	Sound

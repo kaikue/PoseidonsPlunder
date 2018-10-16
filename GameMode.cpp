@@ -19,84 +19,6 @@
 #include <cstddef>
 #include <random>
 
-
-Load< MeshBuffer > meshes(LoadTagDefault, [](){
-	return new MeshBuffer(data_path("test_level.pnc"));
-});
-
-Load< GLuint > meshes_for_vertex_color_program(LoadTagDefault, [](){
-	return new GLuint(meshes->make_vao_for_program(vertex_color_program->program));
-});
-
-Scene::Transform *player_transform = nullptr;
-Scene::Transform *harpoon_transform = nullptr;
-Scene::Transform *treasure_transform = nullptr;
-
-Scene::Camera *camera = nullptr;
-
-Load< Scene > scene(LoadTagDefault, [](){
-	Scene *ret = new Scene;
-	//load transform hierarchy:
-	ret->load(data_path("test_level.scene"), [](Scene &s, Scene::Transform *t, std::string const &m){
-		Scene::Object *obj = s.new_object(t);
-
-		obj->program = vertex_color_program->program;
-		obj->program_mvp_mat4  = vertex_color_program->object_to_clip_mat4;
-		obj->program_mv_mat4x3 = vertex_color_program->object_to_light_mat4x3;
-		obj->program_itmv_mat3 = vertex_color_program->normal_to_light_mat3;
-
-		MeshBuffer::Mesh const &mesh = meshes->lookup(m);
-		obj->vao = *meshes_for_vertex_color_program;
-		obj->start = mesh.start;
-		obj->count = mesh.count;
-	});
-
-  //TODO: load scene and specially mark player, harpoon, and treasure transforms (need to draw those dynamically)
-
-	/*//look up paddle and ball transforms:
-	for (Scene::Transform *t = ret->first_transform; t != nullptr; t = t->alloc_next) {
-		if (t->name == "Paddle1") {
-			if (paddle1_transform) throw std::runtime_error("Multiple 'Paddle1' transforms in scene.");
-			paddle1_transform = t;
-		}
-    if (t->name == "Paddle2") {
-      if (paddle2_transform) throw std::runtime_error("Multiple 'Paddle2' transforms in scene.");
-      paddle2_transform = t;
-    }
-    if (t->name == "Bullet1") {
-      if (bullet1_transform) throw std::runtime_error("Multiple 'Bullet1' transforms in scene.");
-      bullet1_transform = t;
-    }
-    if (t->name == "Bullet2") {
-      if (bullet2_transform) throw std::runtime_error("Multiple 'Bullet2' transforms in scene.");
-      bullet2_transform = t;
-    }
-		if (t->name == "Ball") {
-			if (ball_transform) throw std::runtime_error("Multiple 'Ball' transforms in scene.");
-			ball_transform = t;
-		}
-	}
-	if (!paddle1_transform) throw std::runtime_error("No 'Paddle1' transform in scene.");
-	if (!paddle2_transform) throw std::runtime_error("No 'Paddle2' transform in scene.");
-	if (!bullet1_transform) throw std::runtime_error("No 'Bullet1' transform in scene.");
-	if (!bullet2_transform) throw std::runtime_error("No 'Bullet2' transform in scene.");
-	if (!ball_transform) throw std::runtime_error("No 'Ball' transform in scene.");
-  */
-
-	//look up the camera:
-	for (Scene::Camera *c = ret->first_camera; c != nullptr; c = c->alloc_next) {
-		if (c->transform->name == "Camera") {
-			if (camera) throw std::runtime_error("Multiple 'Camera' objects in scene.");
-			camera = c;
-		}
-	}
-	if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
-
-  //TODO: set camera somehow based on player starting position
-
-	return ret;
-});
-
 GameMode::GameMode(Client &client_) : client(client_) {
 	
 }
@@ -164,15 +86,6 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
     }
     if (evt.type == SDL_MOUSEMOTION) {
       //Note: float(window_size.y) * camera->fovy is a pixels-to-radians conversion factor
-      float yaw = evt.motion.xrel / float(window_size.y) * camera->fovy;
-      float pitch = evt.motion.yrel / float(window_size.y) * camera->fovy;
-      yaw = -yaw;
-      pitch = -pitch;
-      camera->transform->rotation = glm::normalize(
-        camera->transform->rotation
-        * glm::angleAxis(yaw, glm::vec3(0.0f, 1.0f, 0.0f))
-        * glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f))
-      );
       return true;
     }
   }
@@ -342,12 +255,6 @@ void GameMode::update(float elapsed) {
 
   //update own position based on controls
   //TODO: make this affect state (position, velocity, rotation) too
-  glm::mat3 directions = glm::mat3_cast(camera->transform->rotation);
-  float amt = 5.0f * elapsed; //TODO player speed
-  if (controls.fwd) camera->transform->position -= amt * directions[2];
-  if (controls.back) camera->transform->position += amt * directions[2];
-  if (controls.left) camera->transform->position -= amt * directions[0];
-  if (controls.right) camera->transform->position += amt * directions[0];
 
 	if (client.connection) {
     send_action(&client.connection);
@@ -373,58 +280,6 @@ void GameMode::update(float elapsed) {
 }
 
 void GameMode::draw(glm::uvec2 const &drawable_size) {
-	camera->aspect = drawable_size.x / float(drawable_size.y);
-
-	glClearColor(0.25f, 0.0f, 0.5f, 0.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	//set up basic OpenGL state:
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendEquation(GL_FUNC_ADD);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	//set up light positions:
-	glUseProgram(vertex_color_program->program);
-
-	glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.81f, 0.81f, 0.76f)));
-	glUniform3fv(vertex_color_program->sun_direction_vec3, 1, glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
-	glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.2f, 0.2f, 0.3f)));
-	glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
-
-	scene->draw(camera);
-
-  //TODO draw any UI text
-  /*std::string message = " TO ";
-  for (int i = 0; i < state.score1; i++) {
-    message = "*" + message;
-  }
-  if (state.score1 == 0) {
-    message = "NIL" + message;
-  }
-  for (int i = 0; i < state.score2; i++) {
-    message = message + "*";
-  }
-  if (state.score2 == 0) {
-    message = message + "NIL";
-  }
-  draw_message(message, 0.9f);
-
-  if (state.score1 >= state.win_score) {
-    state.won = state.is_player1;
-    state.lost = !state.is_player1;
-  }
-  else if (state.score2 >= state.win_score) {
-    state.won = !state.is_player1;
-    state.lost = state.is_player1;
-  }
-
-  if (state.won) {
-    draw_message("*** YOU WON ***", 0.0f);
-  }
-  else if (state.lost) {
-    draw_message("*** YOU LOST ***", 0.0f);
-  }*/
 
 	GL_ERRORS();
 }

@@ -52,12 +52,12 @@ void send_state(Connection *c, GameState *state, int player_id) {
       glm::vec3 harpoon_pos = state->harpoons[i].position;
       glm::vec3 harpoon_vel = state->harpoons[i].velocity;
       //rotation can be determined from velocity so don't send that
-      c->send(pos.x);
-      c->send(pos.y);
-      c->send(pos.z);
-      c->send(vel.x);
-      c->send(vel.y);
-      c->send(vel.z);
+      c->send(harpoon_pos.x);
+      c->send(harpoon_pos.y);
+      c->send(harpoon_pos.z);
+      c->send(harpoon_vel.x);
+      c->send(harpoon_vel.y);
+      c->send(harpoon_vel.z);
 
       //harpoon collision happens serverside only- if player and harpoon from different team are too close, that player is shot and the harpoon stops
       //stopped harpoons (after hitting land or player) don't hit anything
