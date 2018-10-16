@@ -11,8 +11,8 @@ struct Player {
   glm::vec3 velocity;
   glm::quat orientation;
   int team;
-  bool has_treasure_1;
-  bool has_treasure_2;
+  bool has_treasure_1; //maybe not necessary since treasures have held_by?
+  bool has_treasure_2; //^
   bool is_shot;
   bool shot_harpoon;
   bool grab;
@@ -27,13 +27,18 @@ struct Harpoon {
   glm::vec3 velocity; //used when firing, retracting
 };
 
+struct Treasure {
+  int team;
+  glm::vec3 position;
+  int held_by = -1; //player_id of holding player, or -1 if not held
+};
+
 struct GameState {
   int player_count;
   std::unordered_map<uint32_t, uint32_t> ready_to_start;
   std::unordered_map<uint32_t, Player> players;
   std::unordered_map<uint32_t, Harpoon> harpoons;
-  glm::vec3 treasure_1_loc;
-  glm::vec3 treasure_2_loc;
+  Treasure treasures[2];
 
   void update(float time);
 

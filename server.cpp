@@ -40,30 +40,29 @@ void send_state(Connection *c, GameState *state, int player_id) {
       c->send(vel.x);
       c->send(vel.y);
       c->send(vel.z);
-      c->send(rot.q1);
-      c->send(rot.q2);
-      c->send(rot.q3);
-      c->send(rot.q4);
+      c->send(rot.x);
+      c->send(rot.y);
+      c->send(rot.z);
+      c->send(rot.w);
 
       //harpoon
-      if (state->players[i].shot_harpoon) {
-        c->send(true); //harpoon is fired
-        //TODO: make this use the harpoon state int?
+      //if (state->players[i].shot_harpoon) {
+      c->send(state->harpoons[i].state);
 
-        glm::vec3 harpoon_pos = state->harpoons[i].position;
-        glm::vec3 harpoon_vel = state->harpoons[i].velocity;
-        //rotation can be determined from velocity so don't send that
-        c->send(pos.x);
-        c->send(pos.y);
-        c->send(pos.z);
-        c->send(vel.x);
-        c->send(vel.y);
-        c->send(vel.z);
+      glm::vec3 harpoon_pos = state->harpoons[i].position;
+      glm::vec3 harpoon_vel = state->harpoons[i].velocity;
+      //rotation can be determined from velocity so don't send that
+      c->send(pos.x);
+      c->send(pos.y);
+      c->send(pos.z);
+      c->send(vel.x);
+      c->send(vel.y);
+      c->send(vel.z);
 
-        //harpoon collision happens serverside only- if player and harpoon from different team are too close, that player is shot and the harpoon stops
-        //stopped harpoons (after hitting land or player) don't hit anything
-        //do retracting harpoons count as hitting things? (god of war)
-      }
+      //harpoon collision happens serverside only- if player and harpoon from different team are too close, that player is shot and the harpoon stops
+      //stopped harpoons (after hitting land or player) don't hit anything
+      //do retracting harpoons count as hitting things? (god of war)
+      /*}
       else {
         c->send(false); //harpoon isn't fired
         c->send(0);
@@ -72,13 +71,13 @@ void send_state(Connection *c, GameState *state, int player_id) {
         c->send(0);
         c->send(0);
         c->send(0);
-      }
+      }*/
     }
     // treasure
     //TODO
     for (int i = 0; i < 2; i++) {
-      glm::vec3 pos = state->treasure_1_loc; //state->treasure[i].pos;
-      int is_held_by = 0; // is_holding(players, state->treasure[i]);  //is_holding checks which player owns the treasure 
+      glm::vec3 pos = state->treasures[i].position;
+      int is_held_by = state->treasures[i].held_by;
       c->send(pos.x);
       c->send(pos.y);
       c->send(pos.z);
@@ -87,11 +86,11 @@ void send_state(Connection *c, GameState *state, int player_id) {
   }
 }
 
-void update_server(GameState &state, std::unordered_map< Connection *, int > player_ledger, float time) {
+void update_server(GameState *state, std::unordered_map< Connection *, int > *player_ledger, float time) {
   //TODO: check ready to start, then start game if so
   //TODO: set state.player_count when starting game
 
-  state.update(time);
+  state->update(time);
   //TODO: send state to all clients
   /*for (pair<Connection *, int> p in player_ledger.firsts) {
     send_state(p.first, state, p.second);
@@ -111,13 +110,15 @@ int main(int argc, char **argv) {
 
   std::unordered_map< Connection *, int > player_ledger;
 
+  std::unordered_map< int, int > ready_to_start;
+
   auto then = std::chrono::high_resolution_clock::now();
 
 	while (1) {
     //get updates from clients
     server.poll([&](Connection *c, Connection::Event evt) {
       if (evt == Connection::OnOpen) {
-        player_ledger.insert(make_pair(c, player_count));
+        player_ledger.insert(std::make_pair(c, player_count));
         player_count++;
       }
       else if (evt == Connection::OnClose) {
@@ -125,20 +126,20 @@ int main(int argc, char **argv) {
       }
       else {
         assert(evt == Connection::OnRecv);
-        uint32_t player_id = player_ledger.find(c)->second;// get player ID corresponding to connection
-        Player* player_data = &state.players.find(player_id);
+        uint32_t player_id = player_ledger.find(c)->second; // get player ID corresponding to connection
+        Player* player_data = &state.players.find(player_id)->second;
         if (c->recv_buffer[0] == 'k') {
           c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1);
-          ready_to_start.insert(make_pair(player_id, 1));
+          ready_to_start.insert(std::make_pair(player_id, 1));
         }
         else if (c->recv_buffer[0] == 'n') {
           if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
             return; //wait for more data      
           }
           else {
-            memcpy(player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
-            memcpy(player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * state->NICKNAME_LENGTH);
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * state->NICKNAME_LENGTH);
+            memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
+            memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * state.NICKNAME_LENGTH);
+            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * state.NICKNAME_LENGTH);
           }
         }
         else if (c->recv_buffer[0] == 'p') {
@@ -149,18 +150,18 @@ int main(int argc, char **argv) {
             /* vv relocate to server "update"
             // assert((!has_tr_1 && !has_tr_2) || (has_tr_1 != has_tr_2)); // want to enforce {has neither treasure} or {can have one of two treasures}
             */
-            memcpy(player_data->position->x, c->recv_buffer.data() + 1 + 0 * sizeof(float), sizeof(float));
-            memcpy(player_data->position->y, c->recv_buffer.data() + 1 + 1 * sizeof(float), sizeof(float));
-            memcpy(player_data->position->z, c->recv_buffer.data() + 1 + 2 * sizeof(float), sizeof(float));
-            memcpy(player_data->velocity->x, c->recv_buffer.data() + 1 + 3 * sizeof(float), sizeof(float));
-            memcpy(player_data->velocity->y, c->recv_buffer.data() + 1 + 4 * sizeof(float), sizeof(float));
-            memcpy(player_data->velocity->z, c->recv_buffer.data() + 1 + 5 * sizeof(float), sizeof(float));
-            memcpy(player_data->orientation->x, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
-            memcpy(player_data->orientation->y, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
-            memcpy(player_data->orientation->z, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
-            memcpy(player_data->orientation->w, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
-            memcpy(player_data->shot_harpoon, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
-            memcpy(player_data->grab, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
+            memcpy(&player_data->position.x, c->recv_buffer.data() + 1 + 0 * sizeof(float), sizeof(float));
+            memcpy(&player_data->position.y, c->recv_buffer.data() + 1 + 1 * sizeof(float), sizeof(float));
+            memcpy(&player_data->position.z, c->recv_buffer.data() + 1 + 2 * sizeof(float), sizeof(float));
+            memcpy(&player_data->velocity.x, c->recv_buffer.data() + 1 + 3 * sizeof(float), sizeof(float));
+            memcpy(&player_data->velocity.y, c->recv_buffer.data() + 1 + 4 * sizeof(float), sizeof(float));
+            memcpy(&player_data->velocity.z, c->recv_buffer.data() + 1 + 5 * sizeof(float), sizeof(float));
+            memcpy(&player_data->orientation.x, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
+            memcpy(&player_data->orientation.y, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
+            memcpy(&player_data->orientation.z, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
+            memcpy(&player_data->orientation.w, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
+            memcpy(&player_data->shot_harpoon, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
+            memcpy(&player_data->grab, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
 
             c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
           }

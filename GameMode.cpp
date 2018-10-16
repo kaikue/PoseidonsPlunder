@@ -277,36 +277,40 @@ void GameMode::poll_server() {
           }
           else {
             //TODO: if buffer length is more than twice the length of a full update, skip all but the last one
-            memcpy(&player.is_shot, c->recv_buffer.data() + 1 + 0 * sizeof(bool) + 0 * sizeof(float) + 0 * sizeof(int), sizeof(bool));
+            memcpy(&player.is_shot, c->recv_buffer.data() + 1, sizeof(bool));
             // update the players and the harpoons
             for (int i = 0; i < state.player_count; i++) {
-              memcpy(&state.players[i].position.x, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 0) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].position.y, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 1) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].position.z, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 2) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].velocity.x, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 3) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].velocity.y, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 4) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].velocity.z, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 5) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.x, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 6) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.y, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 7) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.z, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 8) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.w, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 9) * sizeof(float) + 0 * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].position.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 1) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].position.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 2) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].velocity.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].velocity.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 4) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].velocity.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 5) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].orientation.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].orientation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].orientation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].orientation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
 
-              memcpy(&state.players[i].is_firing, c->recv_buffer.data() + 1 + (1 + i) * sizeof(bool) + (i * 13 + 10) * sizeof(float) + 0 * sizeof(int), sizeof(bool)); //TODO harpoon state
-              memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + (2 + i) * sizeof(bool) + (i * 13 + 10) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.harpoons[i].position.y, c->recv_buffer.data() + 1 + (2 + i) * sizeof(bool) + (i * 13 + 11) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              memcpy(&state.harpoons[i].position.z, c->recv_buffer.data() + 1 + (2 + i) * sizeof(bool) + (i * 13 + 12) * sizeof(float) + 0 * sizeof(int), sizeof(float));
-              //TODO harpoon velocity
+              memcpy(&state.harpoons[i].state,      c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
+              memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+              memcpy(&state.harpoons[i].position.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 11) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+              memcpy(&state.harpoons[i].position.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 12) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+              memcpy(&state.harpoons[i].velocity.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 13) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+              memcpy(&state.harpoons[i].velocity.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 14) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+              memcpy(&state.harpoons[i].velocity.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 15) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
             }
             // update treasure pos and state
             for (int j = 0; j < 2; j++) {
-              //TODO
-              memcpy(&state.treasure[i].pos.x, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 0) * sizeof(float) + j * sizeof(int), sizeof(float));
-              memcpy(&state.treasure[i].pos.y, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 1) * sizeof(float) + j * sizeof(int), sizeof(float));
-              memcpy(&state.treasure[i].pos.z, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 2) * sizeof(float) + j * sizeof(int), sizeof(float));
-              memcpy(&state.treasure[i].held_by, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (player_count * 13 + j * 3 + 2) * sizeof(float) + j * sizeof(int), sizeof(int));
+              memcpy(&state.treasures[j].position.x, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 0) * sizeof(float) + j * sizeof(int), sizeof(float));
+              memcpy(&state.treasures[j].position.y, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 1) * sizeof(float) + j * sizeof(int), sizeof(float));
+              memcpy(&state.treasures[j].position.z, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 2) * sizeof(float) + j * sizeof(int), sizeof(float));
+              memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 3) * sizeof(float) + j * sizeof(int), sizeof(int));
             }
-            // (player_count + 1) * bool + (3 * treasure_count + player_count * 13) * float + treasure_count * int
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + (state.player_count + 1) * sizeof(bool) + (6 + state.player_count * 13) * sizeof(float) + 2 * sizeof(int));
+
+            //1 bool for is_shot
+            //player_count * 16 floats for pos(3), vel(3), rot(4), harpoon pos(3), and harpoon vel(3), plus 6 for two treasure pos(3)
+            //player_count ints for harpoon states, plus 2 for two treasure held_by
+            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int));
           }
         }
       }
@@ -346,7 +350,7 @@ void GameMode::update(float elapsed) {
   if (controls.right) camera->transform->position += amt * directions[0];
 
 	if (client.connection) {
-    send_action(client.connection);
+    send_action(&client.connection);
 	}
   controls.fire = false;
   controls.grab = false;
