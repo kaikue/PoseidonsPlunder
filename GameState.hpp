@@ -130,6 +130,8 @@ public:
     std::unordered_map<uint32_t, Controls> player_controls;
     std::unordered_map<uint32_t, Harpoon> harpoons;
     Treasure treasures[2];
+
+    glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun;
     
     int NICKNAME_LENGTH = 12;
 

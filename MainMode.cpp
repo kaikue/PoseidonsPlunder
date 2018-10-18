@@ -15,6 +15,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 #include <iostream>
@@ -24,11 +25,13 @@
 #include <random>
 #include <time.h>
 
-Load<MeshBuffer> meshes(LoadTagDefault, []() {
+Load<MeshBuffer> meshes(LoadTagDefault, []()
+{
     return new MeshBuffer(data_path("test_level.pnc"));
 });
 
-Load<GLuint> meshes_for_vertex_color_program(LoadTagDefault, []() {
+Load<GLuint> meshes_for_vertex_color_program(LoadTagDefault, []()
+{
     return new GLuint(meshes->make_vao_for_program(vertex_color_program->program));
 });
 
@@ -36,22 +39,35 @@ static Scene::Lamp *sun = nullptr;
 
 static Scene::Camera *camera = nullptr;
 
-Load<Scene> scene(LoadTagDefault, []() {
+static Scene::Object::ProgramInfo *vertex_color_program_info = nullptr;
+
+static std::string gun_mesh_name;
+
+static std::string harpoon_mesh_name;
+
+static std::string player_mesh_name;
+
+static Scene *current_scene = nullptr;
+
+Load<Scene> scene(LoadTagDefault, []()
+{
     Scene *ret = new Scene;
+    current_scene = ret;
 
     //pre-build some program info (material) blocks to assign to each object:
-    Scene::Object::ProgramInfo vertex_color_program_info;
-    vertex_color_program_info.program = vertex_color_program->program;
-    vertex_color_program_info.vao = *meshes_for_vertex_color_program;
-    vertex_color_program_info.mvp_mat4 = vertex_color_program->object_to_clip_mat4;
-    vertex_color_program_info.mv_mat4x3 = vertex_color_program->object_to_light_mat4x3;
-    vertex_color_program_info.itmv_mat3 = vertex_color_program->normal_to_light_mat3;
+    vertex_color_program_info = new Scene::Object::ProgramInfo;
+    vertex_color_program_info->program = vertex_color_program->program;
+    vertex_color_program_info->vao = *meshes_for_vertex_color_program;
+    vertex_color_program_info->mvp_mat4 = vertex_color_program->object_to_clip_mat4;
+    vertex_color_program_info->mv_mat4x3 = vertex_color_program->object_to_light_mat4x3;
+    vertex_color_program_info->itmv_mat3 = vertex_color_program->normal_to_light_mat3;
 
     //load transform hierarchy:
-    ret->load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m) {
+    ret->load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
+    {
         Scene::Object *obj = s.new_object(t);
 
-        obj->programs[Scene::Object::ProgramTypeDefault] = vertex_color_program_info;
+        obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
 
         MeshBuffer::Mesh const &mesh = meshes->lookup(m);
         obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
@@ -59,6 +75,10 @@ Load<Scene> scene(LoadTagDefault, []() {
 
         obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
         obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+
+        if (t->name == "Gun") gun_mesh_name = m;
+        if (t->name == "Harpoon") harpoon_mesh_name = m;
+        if (t->name == "Player") player_mesh_name = m;
     });
 
     //look up the camera:
@@ -83,26 +103,81 @@ Load<Scene> scene(LoadTagDefault, []() {
     return ret;
 });
 
-MainMode::MainMode() : state() {
+MainMode::MainMode()
+    : state()
+{
 
     state.add_player(0);
-    player_at = state.players.at(0).position;
+    std::cout << glm::to_string(glm::eulerAngles(state.players.at(0).orientation)) << std::endl;
 
     player_up = glm::vec3(0.0f, 0.0f, 1.0f);
     player_right = glm::vec3(1.0f, 0.0f, 0.0f);
 
-    elev_offset = std::atan2f(
-            std::sqrtf(player_up.x * player_up.x + player_up.y * player_up.y),
-            player_up.z);
+    // spawn in player transform and lock in camera
+    player_trans = current_scene->new_transform();
+    player_trans->position = state.players.at(0).position;
+    player_trans->rotation = state.players.at(0).orientation;
 
-    camera->transform->position = player_at + player_to_camera_offset * player_up;
-    camera->transform->rotation = state.players.at(0).orientation;
+    camera->transform->set_parent(player_trans);
+    camera->transform->position = glm::vec3(0.0f, 0.0f, player_to_camera_offset);
+    // camera needs to be pointing forward
+    camera->transform->rotation = glm::quat(glm::vec3(elev_offset, 0.0f, 0.0f));
+
+    // spawn in gun and harpoon
+    {
+        glm::vec3 gun_position, gun_scale, gun_skew;
+        glm::vec4 gun_persp;
+        glm::quat gun_rotation;
+        glm::decompose(state.gun_offset_to_player, gun_scale, gun_rotation, gun_position, gun_skew, gun_persp);
+        gun_trans = current_scene->new_transform();
+        gun_trans->set_parent(player_trans);
+        gun_trans->position = gun_position;
+        gun_trans->rotation = gun_rotation;
+        gun_trans->scale = gun_scale;
+
+        Scene::Object *gun_obj = current_scene->new_object(gun_trans);
+
+        gun_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+
+        MeshBuffer::Mesh const &mesh = meshes->lookup(gun_mesh_name);
+        gun_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+        gun_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+
+        gun_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+        gun_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+    }
+
+    {
+        glm::vec3 harpoon_position, harpoon_scale, harpoon_skew;
+        glm::vec4 harpoon_persp;
+        glm::quat harpoon_rotation;
+        glm::decompose(state.default_harpoon_offset_to_gun, harpoon_scale, harpoon_rotation, harpoon_position, harpoon_skew, harpoon_persp);
+        harpoon_trans = current_scene->new_transform();
+        harpoon_trans->set_parent(gun_trans);
+        harpoon_trans->position = harpoon_position;
+        harpoon_trans->rotation = harpoon_rotation;
+        harpoon_trans->scale = harpoon_scale;
+
+        Scene::Object *gun_obj = current_scene->new_object(harpoon_trans);
+
+        gun_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+
+        MeshBuffer::Mesh const &mesh = meshes->lookup(harpoon_mesh_name);
+        gun_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+        gun_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+
+        gun_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+        gun_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+    }
+
 }
 
-MainMode::~MainMode() {
+MainMode::~MainMode()
+{
 }
 
-bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
+bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
+{
     //ignore any keys that are the result of automatic key repeat:
     if (evt.type == SDL_KEYDOWN && evt.key.repeat) {
         return false;
@@ -112,13 +187,16 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
         if (evt.key.keysym.scancode == SDL_SCANCODE_W) {
             controls.fwd = (evt.type == SDL_KEYDOWN);
             return true;
-        } else if (evt.key.keysym.scancode == SDL_SCANCODE_S) {
+        }
+        else if (evt.key.keysym.scancode == SDL_SCANCODE_S) {
             controls.back = (evt.type == SDL_KEYDOWN);
             return true;
-        } else if (evt.key.keysym.scancode == SDL_SCANCODE_A) {
+        }
+        else if (evt.key.keysym.scancode == SDL_SCANCODE_A) {
             controls.left = (evt.type == SDL_KEYDOWN);
             return true;
-        } else if (evt.key.keysym.scancode == SDL_SCANCODE_D) {
+        }
+        else if (evt.key.keysym.scancode == SDL_SCANCODE_D) {
             controls.right = (evt.type == SDL_KEYDOWN);
             return true;
         }
@@ -131,7 +209,8 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             mouse_captured = true;
             return true;
         }
-    } else if (mouse_captured) {
+    }
+    else if (mouse_captured) {
         if (evt.type == SDL_KEYDOWN && evt.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
             //SDL_SetRelativeMouseMode(SDL_FALSE);
             //mouse_captured = false;
@@ -151,36 +230,47 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             // conversion factor
             float yaw = evt.motion.xrel / float(window_size.y) * camera->fovy;
             float pitch = evt.motion.yrel / float(window_size.y) * camera->fovy;
+            glm::mat3 directions = camera->transform->make_local_to_world();
             azimuth -= yaw;
             elevation -= pitch;
-            camera->transform->rotation =
-                    glm::normalize(glm::angleAxis(azimuth, player_up) *
-                                   glm::angleAxis(elev_offset + elevation, player_right));
-            state.players.at(0).orientation = camera->transform->rotation;
+            camera->transform->rotation = glm::quat(glm::vec3(elev_offset + elevation, 0.0f, azimuth));
+//            std::cout << "player rotation: " << glm::to_string(glm::eulerAngles(glm::quat(player_trans->make_local_to_world()))) << std::endl;
+            std::cout << "camera rotation: " << glm::to_string(glm::eulerAngles(glm::quat(camera->transform->make_local_to_world()))) << std::endl;
+
+            glm::vec3 gun_rpy = glm::eulerAngles(camera->transform->rotation) + glm::vec3(float(M_PI_2), float(M_PI), 0.0f);
+            gun_trans->rotation = glm::normalize(glm::quat(glm::vec3(-gun_rpy.x, gun_rpy.y, gun_rpy.z)));
+
+            std::cout << "gun rotation: " << glm::to_string(glm::eulerAngles(glm::quat(gun_trans->make_local_to_world()))) << std::endl;
             return true;
         }
     }
     return false;
 }
 
-void MainMode::update(float elapsed) {
-    glm::mat3 directions = glm::mat3_cast(camera->transform->rotation);
+void MainMode::update(float elapsed)
+{
+    float offset = 0.5f * elapsed;
+    glm::mat3 directions = camera->transform->make_local_to_world();
     float amt = 5.0f * elapsed;
-    if (controls.right) player_at += amt * directions[0];
-    if (controls.left) player_at -= amt * directions[0];
-    if (controls.back) player_at += amt * directions[2];
-    if (controls.fwd) player_at -= amt * directions[2];
-    if (controls.fire) state.player_controls.at(0).fire = true;
+    if (controls.right) player_trans->position += amt * directions[0];
+    if (controls.left) player_trans->position -= amt * directions[0];
+    if (controls.back) player_trans->position += amt * directions[2];
+    if (controls.fwd) player_trans->position -= amt * directions[2];
+    if (controls.fire) {
+        state.player_controls.at(0).fire = true;
 
-    state.players.at(0).position = player_at;
+    }
+
+    state.players.at(0).position = player_trans->position;
 
     state.update(elapsed);
 
-    player_at = state.players.at(0).position;
-    camera->transform->position = player_at + player_to_camera_offset * player_up;
+    player_trans->position = state.players.at(0).position;
+
 }
 
-void MainMode::draw(glm::uvec2 const &drawable_size) {
+void MainMode::draw(glm::uvec2 const &drawable_size)
+{
     //set up basic OpenGL state:
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -206,14 +296,16 @@ void MainMode::draw(glm::uvec2 const &drawable_size) {
     GL_ERRORS();
 }
 
-void MainMode::draw_message(std::string message, float y) {
+void MainMode::draw_message(std::string message, float y)
+{
     float height = 0.06f;
     float width = text_width(message, height);
     draw_text(message, glm::vec2(-0.5f * width, y + 0.01f), height, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
     draw_text(message, glm::vec2(-0.5f * width, y), height, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
-void MainMode::show_pause_menu() {
+void MainMode::show_pause_menu()
+{
     std::shared_ptr<MenuMode> menu = std::make_shared<MenuMode>();
 
     std::shared_ptr<Mode> game = shared_from_this();
@@ -221,10 +313,12 @@ void MainMode::show_pause_menu() {
 
     menu->choices.emplace_back("PAUSED");
     menu->choices.emplace_back("");
-    menu->choices.emplace_back("RESUME", [game]() {
+    menu->choices.emplace_back("RESUME", [game]()
+    {
         Mode::set_current(game);
     });
-    menu->choices.emplace_back("QUIT", []() {
+    menu->choices.emplace_back("QUIT", []()
+    {
         Mode::set_current(nullptr);
     });
 

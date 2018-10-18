@@ -25,19 +25,27 @@ else ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
 endif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 
+set(COMMON
+        Connection.cpp
+        GameState.cpp
+        Scene.cpp
+        data_path.cpp
+        Load.cpp)
+
+set(SERVER_FILES
+        server.cpp)
+
 set(CLIENT_FILES
         load_save_png.cpp
         main.cpp
-        data_path.cpp
         compile_program.cpp
         vertex_color_program.cpp
         texture_program.cpp
-        Scene.cpp
+        depth_program.cpp
         Mode.cpp
-        GameState.cpp
+        GameMode.cpp
         MainMode.cpp
         MenuMode.cpp
-        Load.cpp
         MeshBuffer.cpp
         draw_text.cpp
         Sound.cpp)
@@ -58,14 +66,21 @@ add_custom_target(CopyAssets
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/dist/textures ${CMAKE_BINARY_DIR}/textures
 )
 
-add_executable(main ${CLIENT_FILES})
+add_executable(client ${COMMON} ${CLIENT_FILES})
 
-target_include_directories(main PUBLIC ${SDL2_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS})
+target_include_directories(client PUBLIC ${SDL2_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS})
 
-target_link_libraries(main ${OPENGL_LIBRARIES} ${SDL2_LIBRARIES} ${PNG_LIBRARIES} ${BULLET_LIBRARIES})
+target_link_libraries(client ${OPENGL_LIBRARIES} ${SDL2_LIBRARIES} ${PNG_LIBRARIES} ${BULLET_LIBRARIES})
 
-add_dependencies(main CopyAssets)
+add_executable(server ${COMMON} ${SERVER_FILES})
+
+target_include_directories(server PUBLIC ${SDL2_INCLUDE_DIRS} ${PNG_INCLUDE_DIRS} ${GLM_INCLUDE_DIRS} ${BULLET_INCLUDE_DIRS})
+
+target_link_libraries(server ${OPENGL_LIBRARIES} ${SDL2_LIBRARIES} ${PNG_LIBRARIES} ${BULLET_LIBRARIES})
+
+add_dependencies(client CopyAssets)
+add_dependencies(server CopyAssets)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    add_dependencies(main SDL2CopyBinaries)
+    add_dependencies(client SDL2CopyBinaries)
 endif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
