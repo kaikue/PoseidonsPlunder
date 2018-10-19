@@ -29,7 +29,7 @@ GameState::GameState() {
     Scene level;
     //load all collision meshes
     level.load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m) {
-        std::cout << m << std::endl;
+        std::cout << t->name << ", " << m << std::endl;
 
         if (t->name == "Player") {
             auto *object = new btCollisionObject();
@@ -62,9 +62,14 @@ GameState::GameState() {
         } else if (t->name == "Harpoon") {
             default_harpoon_offset_to_gun = t->make_local_to_parent();
         }
-
-
     });
+
+    //look up the camera:
+    for (Scene::Camera *c = level.first_camera; c != nullptr; c = c->alloc_next) {
+        if (c->transform->name == "Camera") {
+            camera_offset_to_player = c->transform->make_local_to_parent();
+        }
+    }
 
 }
 
@@ -72,7 +77,7 @@ void GameState::add_player(uint32_t id) {
     glm::vec3 player_at = glm::vec3(0.0f, -14.0f, 2.0f);
 
     glm::vec3 position = player_at;
-    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    glm::quat rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
 
     // add player collision mesh
     {

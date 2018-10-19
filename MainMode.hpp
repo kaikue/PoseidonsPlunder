@@ -47,8 +47,5 @@ struct MainMode : public Mode {
     Scene::Transform *debug_trans = nullptr;
     Scene::Transform *gun_trans = nullptr;
     Scene::Transform *harpoon_trans = nullptr;
-    static constexpr float player_to_camera_offset = 0.8f;
-    float azimuth = 0.0f, elevation = 0.0f;
-    float elev_offset = float(M_PI_2);
-    glm::quat init_camera;
+    float azimuth, elevation;
 };

@@ -14,6 +14,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -88,6 +89,7 @@ Load<Scene> scene(LoadTagDefault, []()
             camera = c;
         }
     }
+
     if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
 
     //look up the spotlight:
@@ -118,10 +120,18 @@ MainMode::MainMode()
     player_trans->position = state.players.at(0).position;
     player_trans->rotation = state.players.at(0).orientation;
 
-    camera->transform->set_parent(player_trans);
-    camera->transform->position = glm::vec3(0.0f, 0.0f, player_to_camera_offset);
-    // camera needs to be pointing forward
-    camera->transform->rotation = glm::quat(glm::vec3(elev_offset, 0.0f, 0.0f));
+    {
+        glm::vec3 cam_position, cam_scale, cam_skew;
+        glm::vec4 cam_persp;
+        glm::quat cam_rotation;
+        glm::decompose(state.camera_offset_to_player, cam_scale, cam_rotation, cam_position, cam_skew, cam_persp);
+        camera->transform->set_parent(player_trans);
+        camera->transform->position = cam_position;
+        camera->transform->rotation = cam_rotation;
+        camera->transform->scale = cam_scale;
+        elevation = glm::pitch(cam_rotation);
+        azimuth = glm::roll(cam_rotation);
+    }
 
     // spawn in gun and harpoon
     {
@@ -233,9 +243,9 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             glm::mat3 directions = camera->transform->make_local_to_world();
             azimuth -= yaw;
             elevation -= pitch;
-            camera->transform->rotation = glm::quat(glm::vec3(elev_offset + elevation, 0.0f, azimuth));
-//            std::cout << "player rotation: " << glm::to_string(glm::eulerAngles(glm::quat(player_trans->make_local_to_world()))) << std::endl;
-            std::cout << "camera rotation: " << glm::to_string(glm::eulerAngles(glm::quat(camera->transform->make_local_to_world()))) << std::endl;
+
+            camera->transform->rotation = glm::quat(glm::vec3(elevation, 0.0f, azimuth));
+            std::cout << "camera rotation: " << glm::to_string(glm::eulerAngles(glm::quat(camera->transform->rotation))) << std::endl;
 
             glm::vec3 gun_rpy = glm::eulerAngles(camera->transform->rotation) + glm::vec3(float(M_PI_2), float(M_PI), 0.0f);
             gun_trans->rotation = glm::normalize(glm::quat(glm::vec3(-gun_rpy.x, gun_rpy.y, gun_rpy.z)));
