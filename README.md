@@ -6,3 +6,17 @@ Server movement validation:
 - Server validates new position against old position- if not too far away (some multiple of max speed), update player's position
 - Server sends players' positions to client- if self position is too far away, snap to that?
 	- Could cause occasional jumping but will largely prevent teleporting with hacked clients
+
+- Build instructions:
+	- Needs kit-lib-win and bullet built in local directory
+
+clone
+build without pybullet.bat
+open in VS 2017
+config manager
+new solution platform x64
+build > build solutions (ctrl shift B)
+	repeat a few times (dependencies are bad)
+
+only build: BulletCollision, BulletDynamics, LinearMath
+Need to set /md flags

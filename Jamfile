@@ -4,7 +4,7 @@
 #You shouldn't need to change it.
 
 if $(OS) = NT { #Windows
-	C++FLAGS = /nologo /c /EHsc /W3 /WX /MD /I"kit-libs-win/out/include" /I"kit-libs-win/out/include/SDL2" /I"kit-libs-win/out/libpng"
+	C++FLAGS = /nologo /c /EHsc /W3 /WX /MD /I"kit-libs-win/out/include" /I"kit-libs-win/out/include/SDL2" /I"kit-libs-win/out/libpng" /I"bullet/src"
 		#disable a few warnings:
 		/wd4146 #-1U is still unsigned
 		/wd4297 #unforunately SDLmain is nothrow
@@ -13,8 +13,9 @@ if $(OS) = NT { #Windows
 		/LIBPATH:"kit-libs-win/out/lib"
 		/LIBPATH:"kit-libs-win/out/libpng"
 		/LIBPATH:"kit-libs-win/out/zlib"
+		/LIBPATH:"bullet/build"
 	;
-	LINKLIBS = SDL2main.lib SDL2.lib OpenGL32.lib libpng.lib zlib.lib ;
+	LINKLIBS = SDL2main.lib SDL2.lib OpenGL32.lib libpng.lib zlib.lib BulletCollision.lib BulletDynamics.lib LinearMath.lib ;
 
 	File dist\\SDL2.dll : kit-libs-win\\out\\dist\\SDL2.dll ;
 } else if $(OS) = MACOSX { #MacOS
@@ -24,7 +25,7 @@ if $(OS) = NT { #Windows
 		-std=c++14 -g -Wall -Werror
 		-I$(KIT_LIBS)/libpng/include                           #libpng
 		-I$(KIT_LIBS)/glm/include                              #glm
-		-I/usr/local/include/bullet
+		-I/usr/local/include/bullet/bullet
 		`PATH=$(KIT_LIBS)/SDL2/bin:$PATH sdl2-config --cflags` #SDL2
 		;
 	LINK = clang++ ;
@@ -87,7 +88,7 @@ CLIENT_NAMES =
 
 if $(OS) = NT {
 	#On windows, an additional 'gl_shims' file is needed:
-	CLIENT_NAMES += gl_shims ;
+	COMMON_NAMES += gl_shims ;
 }
 
 LOCATE_TARGET = objs ; #put objects in 'objs' directory

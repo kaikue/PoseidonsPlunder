@@ -15,6 +15,11 @@
 #include <vector>
 #include <random>
 
+#ifndef M_PI_2
+#define M_PI_2 (M_PI / 2.0)
+#endif // M_PI_2
+
+
 struct MainMode : public Mode {
     MainMode();
 
