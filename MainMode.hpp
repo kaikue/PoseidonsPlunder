@@ -47,8 +47,13 @@ struct MainMode : public Mode {
 
     bool mouse_captured = false;
 
-    glm::vec3 player_at, player_up, player_right;
+    glm::vec3 player_up, player_right;
+    Scene::Transform *player_trans = nullptr;
+    Scene::Transform *debug_trans = nullptr;
+    Scene::Transform *gun_trans = nullptr;
+    Scene::Transform *harpoon_trans = nullptr;
     static constexpr float player_to_camera_offset = 0.8f;
-    float azimuth, elevation = float(M_PI_2);
-    float elev_offset;
+    float azimuth = 0.0f, elevation = 0.0f;
+    float elev_offset = float(M_PI_2);
+    glm::quat init_camera;
 };

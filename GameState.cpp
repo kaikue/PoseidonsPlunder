@@ -64,6 +64,10 @@ GameState::GameState() {
             auto *mesh_shape = new btBvhTriangleMeshShape(tri_array, true);
             object->setCollisionShape(mesh_shape);
             bt_collision_world->addCollisionObject(object);
+        } else if (t->name == "Gun") {
+            gun_offset_to_player = t->make_local_to_parent();
+        } else if (t->name == "Harpoon") {
+            default_harpoon_offset_to_gun = t->make_local_to_parent();
         }
 
 
@@ -72,16 +76,10 @@ GameState::GameState() {
 }
 
 void GameState::add_player(uint32_t id) {
-    glm::vec3 player_up = glm::vec3(0.0f, 0.0f, 1.0f);
     glm::vec3 player_at = glm::vec3(0.0f, -14.0f, 2.0f);
-    glm::vec3 player_right = glm::vec3(1.0f, 0.0f, 0.0f);
-
-    float elev_offset = std::atan2f(
-            std::sqrtf(player_up.x * player_up.x + player_up.y * player_up.y),
-            player_up.z);
 
     glm::vec3 position = player_at;
-    glm::quat rotation = glm::angleAxis(elev_offset + float(M_PI_2), player_right);
+    glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
     // add player collision mesh
     {
@@ -98,6 +96,7 @@ void GameState::add_player(uint32_t id) {
     }
 
     players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test"};
+    player_controls[id] = {false, false, false, false, false, false};
 }
 
 void GameState::update(float time) {
