@@ -9,6 +9,13 @@
 
 #include <glm/gtx/string_cast.hpp>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
+#ifndef M_PI_2
+#define M_PI_2 (M_PI / 2.0)
+#endif // M_PI_2
+
 Load<CollisionMeshBuffer> meshes_for_collision(LoadTagDefault, []() {
     return new CollisionMeshBuffer(data_path("test_level.collision"));
 });
@@ -36,7 +43,7 @@ GameState::GameState() {
             object->setWorldTransform(
                     btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
                                 btVector3(t->position.x, t->position.y, t->position.z)));
-            auto *sphere = new btSphereShape(player_sphere_radius);
+            auto *sphere = new btSphereShape((btScalar)player_sphere_radius);
             object->setCollisionShape(sphere);
             bt_collision_world->addCollisionObject(object);
 
@@ -85,7 +92,7 @@ void GameState::add_player(uint32_t id) {
         object->setWorldTransform(
                 btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                             btVector3(position.x, position.y, position.z)));
-        auto *sphere = new btSphereShape(player_sphere_radius);
+        auto *sphere = new btSphereShape((btScalar)player_sphere_radius);
         object->setCollisionShape(sphere);
         object->setUserIndex(id);
         bt_collision_world->addCollisionObject(object);
@@ -148,9 +155,9 @@ void GameState::update(float time) {
             btVector3 rebound_vec;
 
             if (player_is_A) {
-                rebound_vec = (ptA - ptB) * ((ptdist > 0) - (ptdist < 0));
+                rebound_vec = (ptA - ptB) * (btScalar)((ptdist > 0) - (ptdist < 0));
             } else {
-                rebound_vec = (ptB - ptA) * ((ptdist > 0) - (ptdist < 0));
+                rebound_vec = (ptB - ptA) * (btScalar)((ptdist > 0) - (ptdist < 0));
             }
 
 //            std::cout << "before collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;

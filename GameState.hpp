@@ -7,7 +7,7 @@
 #include <fstream>
 #include <memory>
 #include <vector>
-#include <bullet/btBulletDynamicsCommon.h>
+#include <btBulletDynamicsCommon.h>
 
 #include "read_chunk.hpp"
 
