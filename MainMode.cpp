@@ -49,11 +49,6 @@ static std::string player_mesh_name;
 
 static Scene *current_scene = nullptr;
 
-static inline void get_transform()
-{
-
-}
-
 Load<Scene> scene(LoadTagDefault, []()
 {
     Scene *ret = new Scene;
@@ -239,7 +234,7 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             // conversion factor
             float yaw = evt.motion.xrel / float(window_size.y) * camera->fovy;
             float pitch = evt.motion.yrel / float(window_size.y) * camera->fovy;
-            glm::mat3 directions = camera->transform->make_local_to_world();
+
             azimuth -= yaw;
             elevation -= pitch;
 
@@ -268,6 +263,9 @@ void MainMode::update(float elapsed)
     state.players.at(player_id).position = player_trans->position;
     state.players.at(player_id).rotation = glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
 
+//    gun_trans->rotation = state.players.at(player_id).rotation * glm::quat(glm::vec3(0.0f, 0.0f, float(M_PI)));
+    state.update(elapsed);
+
     // update gun position & rotation
     {
         glm::vec3 position = state.players.at(player_id).position;
@@ -280,9 +278,6 @@ void MainMode::update(float elapsed)
         glm::mat4 gun_to_world = final * state.gun_offset_to_player;
         gun_trans->set_transform(gun_to_world);
     }
-
-//    gun_trans->rotation = state.players.at(player_id).rotation * glm::quat(glm::vec3(0.0f, 0.0f, float(M_PI)));
-    state.update(elapsed);
 
     player_trans->position = state.players.at(player_id).position;
     harpoon_trans->position = state.harpoons.at(player_id).position;

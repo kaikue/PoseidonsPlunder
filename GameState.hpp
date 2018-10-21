@@ -168,4 +168,18 @@ private:
     btCollisionWorld *bt_collision_world;
 
     std::unordered_map<uint32_t, std::pair<btCollisionObject *, btCollisionObject *>> player_collisions;
+
+    enum class HarpoonCollision { Harpoon, Player, Other };
+    enum class PlayerCollision { Player, Other };
+
+    void handle_harpoon_collision(const btCollisionObject *harpoon_obj,
+                                  const btCollisionObject *other_obj,
+                                  const HarpoonCollision type,
+                                  const btPersistentManifold *manifold);
+
+    void handle_player_collision(const btCollisionObject *player_obj,
+                                     const btCollisionObject *other_obj,
+                                     const GameState::PlayerCollision type,
+                                     const btPersistentManifold *manifold,
+                                     bool A_is_player);
 };

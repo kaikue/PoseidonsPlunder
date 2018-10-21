@@ -32,7 +32,7 @@ GameState::GameState()
     btVector3 worldAabbMin(-sscene_size, -sscene_size, -sscene_size);
     btVector3 worldAabbMax(sscene_size, sscene_size, sscene_size);
     //This is one type of broadphase, bullet has others that might be faster depending on the application
-    bt_broadphase = new bt32BitAxisSweep3(worldAabbMin, worldAabbMax, max_objects, 0,
+    bt_broadphase = new bt32BitAxisSweep3(worldAabbMin, worldAabbMax, max_objects, nullptr,
                                           true);  // true for disabling raycast accelerator
 
     bt_collision_world = new btCollisionWorld(bt_dispatcher, bt_broadphase, bt_collision_configuration);
@@ -132,7 +132,7 @@ void GameState::add_player(uint32_t id)
                                      harpoon_pos_rot.second.z,
                                      harpoon_pos_rot.second.w),
                         btVector3(harpoon_pos_rot.first.x, harpoon_pos_rot.first.y, harpoon_pos_rot.first.z)));
-        auto *capsule = new btCapsuleShape((btScalar) harpoon_radius, (btScalar) harpoon_length);
+        auto *capsule = new btCylinderShapeZ(btVector3(harpoon_radius, 0, 0.5 * harpoon_length));
         harpoon_object->setCollisionShape(capsule);
 
         // set additional pointer to harpoon for identification
@@ -143,6 +143,99 @@ void GameState::add_player(uint32_t id)
 
     player_collisions[id] = {player_object, harpoon_object};
     harpoon_time[id] = 0.0f;
+}
+
+void GameState::handle_harpoon_collision(const btCollisionObject *harpoon_obj,
+                                         const btCollisionObject *other_obj,
+                                         const HarpoonCollision type,
+                                         const btPersistentManifold *manifold)
+{
+    auto harpoon = ((Harpoon *) harpoon_obj->getUserPointer());
+
+    if (harpoon->state == 0) {
+        // harpoon held in gun, so collision is ignored
+        return;
+    }
+
+    int numContacts = manifold->getNumContacts();
+
+    bool intersects = false;
+
+    for (int i = 0; i < numContacts; i++) {
+        //Get the contact information
+        const btManifoldPoint &pt = manifold->getContactPoint(i);
+        if (pt.getDistance() < 0) {
+            intersects = true;
+        }
+    }
+
+    if (!intersects) {
+        // if there is no true collision, return;
+        return;
+    }
+
+    switch (type) {
+        case HarpoonCollision::Harpoon: {
+            // harpoon on harpoon collision is ignored
+        }
+            break;
+        case HarpoonCollision::Player: {
+            if (other_obj->getUserIndex() == harpoon_obj->getUserIndex()) {
+                // harpoon on self collision is ignored
+                return;
+            }
+            else {
+                auto player = ((Player *) other_obj->getUserPointer());
+                player->is_shot = true;
+                // harpoon retract since it hit another player
+                harpoon->state = 3;
+            }
+        }
+            break;
+        case HarpoonCollision::Other: {
+            // harpoon landed on static object
+            harpoon->state = 2;
+        }
+            break;
+    }
+}
+
+void GameState::handle_player_collision(const btCollisionObject *player_obj,
+                                        const btCollisionObject *other_obj,
+                                        const GameState::PlayerCollision type,
+                                        const btPersistentManifold *manifold,
+                                        bool A_is_player)
+{
+    int numContacts = manifold->getNumContacts();
+
+    //For each contact point in that manifold
+    for (int j = 0; j < numContacts; j++) {
+        //Get the contact information
+        const btManifoldPoint &pt = manifold->getContactPoint(j);
+        btVector3 ptA = pt.getPositionWorldOnA();
+        btVector3 ptB = pt.getPositionWorldOnB();
+        double ptdist = pt.getDistance();
+        btVector3 rebound_vec;
+
+        if (ptdist < 0) {
+            if (A_is_player) {
+                rebound_vec = (ptA - ptB) * (btScalar) ((ptdist > 0) - (ptdist < 0));
+            }
+            else {
+                rebound_vec = (ptB - ptA) * (btScalar) ((ptdist > 0) - (ptdist < 0));
+            }
+
+//            std::cout << "before collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+            ((Player *) player_obj->getUserPointer())->position +=
+                glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
+//            std::cout << rebound_vec.x() << ", " << rebound_vec.y() << ", " << rebound_vec.z() << std::endl;
+//            std::cout << "after collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+
+            if (type == PlayerCollision::Player) {
+                // handle player on player collision
+            }
+        }
+    }
 }
 
 void GameState::update(float time)
@@ -186,102 +279,70 @@ void GameState::update(float time)
         const btCollisionObject *obA = contactManifold->getBody0();
         const btCollisionObject *obB = contactManifold->getBody1();
         contactManifold->refreshContactPoints(obA->getWorldTransform(), obB->getWorldTransform());
-        int numContacts = contactManifold->getNumContacts();
 
-        bool player_is_A = false;
-        bool player_is_B = false;
-        bool harpoon_is_A = false;
-        bool harpoon_is_B = false;
-        int idA;
-        int idB;
+        bool A_is_player = false;
+        bool B_is_player = false;
+        bool A_is_harpoon = false;
+        bool B_is_harpoon = false;
 
         if (players.find(obA->getUserIndex()) != players.end()) {
-            idA = obA->getUserIndex();
             if (obA->getUserPointer() == &harpoons.at(obA->getUserIndex())) {
-                harpoon_is_A = true;
-            } else {
-                player_is_A = true;
+                A_is_harpoon = true;
+            }
+            else {
+                A_is_player = true;
             }
         }
         if (players.find(obB->getUserIndex()) != players.end()) {
-            idB = obB->getUserIndex();
             if (obB->getUserPointer() == &harpoons.at(obB->getUserIndex())) {
-                harpoon_is_B = true;
-            } else {
-                player_is_B = true;
-            }
-        }
-
-        if (!player_is_A && !player_is_B && !harpoon_is_A && !harpoon_is_B) {
-            // harpoon hitting harpoon is not something to worry about
-            continue;
-        } else if (harpoon_is_A || harpoon_is_B) {
-
-            if (harpoon_is_A) {
-                if (harpoon_is_B || ((Harpoon *) obA->getUserPointer())->state == 0) {
-                    continue;
-                }
-                if (player_is_B) {
-                    // harpoon self collision is ignored
-                    if (idB == idA) {
-                        continue;
-                    }
-
-                    // harpoon retract because it hit player
-                    ((Harpoon *) obA->getUserPointer())->state = 3;
-                    ((Player *) obB->getUserPointer())->is_shot = true;
-                    continue;
-                } else {
-                    // harpoon landed on static object
-                    ((Harpoon *) obA->getUserPointer())->state = 2;
-                    continue;
-                }
-            } else if (harpoon_is_B) {
-                if (((Harpoon *) obB->getUserPointer())->state == 0) {
-                    continue;
-                }
-                if (player_is_A) {
-                    // harpoon self collision is ignored
-                    if (idB == idA) {
-                        continue;
-                    }
-
-                    // harpoon retract because it hit player
-                    ((Harpoon *) obB->getUserPointer())->state = 3;
-                    ((Player *) obA->getUserPointer())->is_shot = true;
-
-                    continue;
-                } else {
-                    // harpoon landed on static object
-                    ((Harpoon *) obB->getUserPointer())->state = 2;
-
-                    continue;
-                }
-            }
-        }
-
-        Player *player = (player_is_A) ? (Player *) obA->getUserPointer() : (Player *) obB->getUserPointer();
-
-        //For each contact point in that manifold
-        for (int j = 0; j < numContacts; j++) {
-            //Get the contact information
-            btManifoldPoint &pt = contactManifold->getContactPoint(j);
-            btVector3 ptA = pt.getPositionWorldOnA();
-            btVector3 ptB = pt.getPositionWorldOnB();
-            double ptdist = pt.getDistance();
-            btVector3 rebound_vec;
-
-            if (player_is_A) {
-                rebound_vec = (ptA - ptB) * (btScalar) ((ptdist > 0) - (ptdist < 0));
+                B_is_harpoon = true;
             }
             else {
-                rebound_vec = (ptB - ptA) * (btScalar) ((ptdist > 0) - (ptdist < 0));
+                B_is_player = true;
             }
+        }
 
-//            std::cout << "before collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
-            player->position += glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
-//            std::cout << rebound_vec.x() << ", " << rebound_vec.y() << ", " << rebound_vec.z() << std::endl;
-//            std::cout << "after collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+        if (A_is_harpoon || B_is_harpoon) {
+            if (A_is_harpoon) {
+                if (B_is_harpoon) {
+                    handle_harpoon_collision(obA, obB, HarpoonCollision::Harpoon, contactManifold);
+                }
+                else if (B_is_player) {
+                    handle_harpoon_collision(obA, obB, HarpoonCollision::Player, contactManifold);
+                }
+                else {
+                    handle_harpoon_collision(obA, obB, HarpoonCollision::Other, contactManifold);
+                }
+            }
+            else {
+                if (A_is_harpoon) {
+                    handle_harpoon_collision(obB, obA, HarpoonCollision::Harpoon, contactManifold);
+                }
+                else if (A_is_player) {
+                    handle_harpoon_collision(obB, obA, HarpoonCollision::Player, contactManifold);
+                }
+                else {
+                    handle_harpoon_collision(obB, obA, HarpoonCollision::Other, contactManifold);
+                }
+            }
+        }
+        else if (A_is_player || B_is_player) {
+            if (A_is_player) {
+                if (B_is_player) {
+                    handle_player_collision(obA, obB, PlayerCollision::Player, contactManifold, A_is_player);
+                }
+                else {
+                    handle_player_collision(obA, obB, PlayerCollision::Other, contactManifold, A_is_player);
+                }
+            }
+            else {
+                if (A_is_player) {
+                    handle_player_collision(obB, obA, PlayerCollision::Player, contactManifold, A_is_player);
+                }
+                else {
+                    handle_player_collision(obB, obA, PlayerCollision::Other, contactManifold, A_is_player);
+                }
+            }
         }
     }
 
