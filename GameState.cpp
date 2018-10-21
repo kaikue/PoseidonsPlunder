@@ -18,11 +18,13 @@
 #define M_PI_2 (M_PI / 2.0)
 #endif // M_PI_2
 
-Load<CollisionMeshBuffer> meshes_for_collision(LoadTagDefault, []() {
+Load<CollisionMeshBuffer> meshes_for_collision(LoadTagDefault, []()
+{
     return new CollisionMeshBuffer(data_path("test_level.collision"));
 });
 
-GameState::GameState() {
+GameState::GameState()
+{
     bt_collision_configuration = new btDefaultCollisionConfiguration();
     bt_dispatcher = new btCollisionDispatcher(bt_collision_configuration);
 
@@ -37,38 +39,44 @@ GameState::GameState() {
 
     Scene level;
     //load all collision meshes
-    level.load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m) {
+    level.load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
+    {
         std::cout << t->name << ", " << m << std::endl;
 
         if (t->name == "Player") {
             auto *object = new btCollisionObject();
             object->setWorldTransform(
-                    btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
-                                btVector3(t->position.x, t->position.y, t->position.z)));
-            auto *sphere = new btSphereShape((btScalar)player_sphere_radius);
+                btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
+                            btVector3(t->position.x, t->position.y, t->position.z)));
+            auto *sphere = new btSphereShape((btScalar) player_sphere_radius);
             object->setCollisionShape(sphere);
             bt_collision_world->addCollisionObject(object);
 
-        } else if (t->name.find("CL") != std::string::npos) {
+        }
+        else if (t->name.find("CL") != std::string::npos) {
 
             CollisionMeshBuffer::CollisionMesh const &mesh = meshes_for_collision->lookup(m);
 
             auto *object = new btCollisionObject();
             object->setWorldTransform(
-                    btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
-                                btVector3(t->position.x, t->position.y, t->position.z)));
+                btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
+                            btVector3(t->position.x, t->position.y, t->position.z)));
             btStridingMeshInterface *tri_array = new btTriangleIndexVertexArray((int) mesh.triangle_count,
-                                                                                (int *) &(meshes_for_collision->triangles[mesh.triangle_start].x),
+                                                                                (int *) &(meshes_for_collision
+                                                                                    ->triangles[mesh.triangle_start].x),
                                                                                 (int) sizeof(glm::uvec3),
                                                                                 (int) mesh.vertex_count,
-                                                                                (btScalar *) &(meshes_for_collision->vertices[mesh.vertex_start].x),
+                                                                                (btScalar *) &(meshes_for_collision
+                                                                                    ->vertices[mesh.vertex_start].x),
                                                                                 (int) sizeof(glm::vec3));
             auto *mesh_shape = new btBvhTriangleMeshShape(tri_array, true);
             object->setCollisionShape(mesh_shape);
             bt_collision_world->addCollisionObject(object);
-        } else if (t->name == "Gun") {
+        }
+        else if (t->name == "Gun") {
             gun_offset_to_player = t->make_local_to_parent();
-        } else if (t->name == "Harpoon") {
+        }
+        else if (t->name == "Harpoon") {
             default_harpoon_offset_to_gun = t->make_local_to_parent();
         }
     });
@@ -84,7 +92,8 @@ GameState::GameState() {
 
 }
 
-void GameState::add_player(uint32_t id) {
+void GameState::add_player(uint32_t id)
+{
     glm::vec3 player_at = glm::vec3(0.0f, -14.0f, 2.0f);
 
     glm::vec3 position = player_at;
@@ -94,28 +103,50 @@ void GameState::add_player(uint32_t id) {
     glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
     glm::mat4 final = trans * rot;
 
-    // add player collision mesh
-    {
-        auto *object = new btCollisionObject();
-        object->setWorldTransform(
-                btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-                            btVector3(position.x, position.y, position.z)));
-        auto *sphere = new btSphereShape((btScalar)player_sphere_radius);
-        object->setCollisionShape(sphere);
-        object->setUserIndex(id);
-        bt_collision_world->addCollisionObject(object);
+    players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test"};
 
-        player_collisions[id] = object;
+    // add player collision mesh
+    auto *player_object = new btCollisionObject();
+    {
+        player_object->setWorldTransform(
+            btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                        btVector3(position.x, position.y, position.z)));
+        auto *sphere = new btSphereShape((btScalar) player_sphere_radius);
+        player_object->setCollisionShape(sphere);
+
+        player_object->setUserIndex(id);
+        player_object->setUserPointer((void *) &players.at(id));
+        bt_collision_world->addCollisionObject(player_object);
     }
 
     glm::mat4 harpoon_to_world = final * default_harpoon_to_player;
     auto harpoon_pos_rot = get_pos_rot(harpoon_to_world);
-
-    players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test"};
     harpoons[id] = {id, 0, harpoon_pos_rot.first, harpoon_pos_rot.second, glm::vec3(0.0f)};
+
+    // add harpoon collision mesh
+    auto *harpoon_object = new btCollisionObject();
+    {
+        harpoon_object->setWorldTransform(
+            btTransform(btQuaternion(harpoon_pos_rot.second.x,
+                                     harpoon_pos_rot.second.y,
+                                     harpoon_pos_rot.second.z,
+                                     harpoon_pos_rot.second.w),
+                        btVector3(harpoon_pos_rot.first.x, harpoon_pos_rot.first.y, harpoon_pos_rot.first.z)));
+        auto *capsule = new btCapsuleShape((btScalar) harpoon_radius, (btScalar) harpoon_length);
+        harpoon_object->setCollisionShape(capsule);
+
+        // set additional pointer to harpoon for identification
+        harpoon_object->setUserIndex(id);
+        harpoon_object->setUserPointer((void *) &harpoons.at(id));
+        bt_collision_world->addCollisionObject(harpoon_object);
+    }
+
+    player_collisions[id] = {player_object, harpoon_object};
+    harpoon_time[id] = 0.0f;
 }
 
-void GameState::update(float time) {
+void GameState::update(float time)
+{
 
     // handling harpoon firing event
     for (auto &pair : players) {
@@ -130,9 +161,18 @@ void GameState::update(float time) {
         glm::vec3 position = players.at(pair.first).position;
         glm::quat rotation = players.at(pair.first).rotation;
 
-        pair.second->setWorldTransform(
-                btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-                            btVector3(position.x, position.y, position.z)));
+        // first update player
+        pair.second.first->setWorldTransform(
+            btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                        btVector3(position.x, position.y, position.z)));
+
+        position = harpoons.at(pair.first).position;
+        rotation = harpoons.at(pair.first).rotation;
+
+        // then update harpoon
+        pair.second.second->setWorldTransform(
+            btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                        btVector3(position.x, position.y, position.z)));
 
     }
 
@@ -148,21 +188,79 @@ void GameState::update(float time) {
         contactManifold->refreshContactPoints(obA->getWorldTransform(), obB->getWorldTransform());
         int numContacts = contactManifold->getNumContacts();
 
-        uint32_t collision_player_id;
-        const btCollisionObject * player_obj;
-        bool player_is_A;
+        bool player_is_A = false;
+        bool player_is_B = false;
+        bool harpoon_is_A = false;
+        bool harpoon_is_B = false;
+        int idA;
+        int idB;
 
         if (players.find(obA->getUserIndex()) != players.end()) {
-            collision_player_id = obA->getUserIndex();
-            player_obj = obA;
-            player_is_A = true;
-        } else if (players.find(obB->getUserIndex()) != players.end()) {
-            collision_player_id = obB->getUserIndex();
-            player_obj = obB;
-            player_is_A = false;
-        } else {
-            continue;
+            idA = obA->getUserIndex();
+            if (obA->getUserPointer() == &harpoons.at(obA->getUserIndex())) {
+                harpoon_is_A = true;
+            } else {
+                player_is_A = true;
+            }
         }
+        if (players.find(obB->getUserIndex()) != players.end()) {
+            idB = obB->getUserIndex();
+            if (obB->getUserPointer() == &harpoons.at(obB->getUserIndex())) {
+                harpoon_is_B = true;
+            } else {
+                player_is_B = true;
+            }
+        }
+
+        if (!player_is_A && !player_is_B && !harpoon_is_A && !harpoon_is_B) {
+            // harpoon hitting harpoon is not something to worry about
+            continue;
+        } else if (harpoon_is_A || harpoon_is_B) {
+
+            if (harpoon_is_A) {
+                if (harpoon_is_B || ((Harpoon *) obA->getUserPointer())->state == 0) {
+                    continue;
+                }
+                if (player_is_B) {
+                    // harpoon self collision is ignored
+                    if (idB == idA) {
+                        continue;
+                    }
+
+                    // harpoon retract because it hit player
+                    ((Harpoon *) obA->getUserPointer())->state = 3;
+                    ((Player *) obB->getUserPointer())->is_shot = true;
+                    continue;
+                } else {
+                    // harpoon landed on static object
+                    ((Harpoon *) obA->getUserPointer())->state = 2;
+                    continue;
+                }
+            } else if (harpoon_is_B) {
+                if (((Harpoon *) obB->getUserPointer())->state == 0) {
+                    continue;
+                }
+                if (player_is_A) {
+                    // harpoon self collision is ignored
+                    if (idB == idA) {
+                        continue;
+                    }
+
+                    // harpoon retract because it hit player
+                    ((Harpoon *) obB->getUserPointer())->state = 3;
+                    ((Player *) obA->getUserPointer())->is_shot = true;
+
+                    continue;
+                } else {
+                    // harpoon landed on static object
+                    ((Harpoon *) obB->getUserPointer())->state = 2;
+
+                    continue;
+                }
+            }
+        }
+
+        Player *player = (player_is_A) ? (Player *) obA->getUserPointer() : (Player *) obB->getUserPointer();
 
         //For each contact point in that manifold
         for (int j = 0; j < numContacts; j++) {
@@ -174,13 +272,14 @@ void GameState::update(float time) {
             btVector3 rebound_vec;
 
             if (player_is_A) {
-                rebound_vec = (ptA - ptB) * (btScalar)((ptdist > 0) - (ptdist < 0));
-            } else {
-                rebound_vec = (ptB - ptA) * (btScalar)((ptdist > 0) - (ptdist < 0));
+                rebound_vec = (ptA - ptB) * (btScalar) ((ptdist > 0) - (ptdist < 0));
+            }
+            else {
+                rebound_vec = (ptB - ptA) * (btScalar) ((ptdist > 0) - (ptdist < 0));
             }
 
 //            std::cout << "before collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
-            players.at(collision_player_id).position += glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
+            player->position += glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
 //            std::cout << rebound_vec.x() << ", " << rebound_vec.y() << ", " << rebound_vec.z() << std::endl;
 //            std::cout << "after collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
         }
@@ -202,14 +301,16 @@ void GameState::update(float time) {
 
             pair.second.position = harpoon_pos_rot.first;
             pair.second.rotation = harpoon_pos_rot.second;
-        } else if (pair.second.state == 1) {
+        }
+        else if (pair.second.state == 1) {
             // fired
             pair.second.position += pair.second.velocity * time;
         }
     }
 }
 
-GameState::~GameState() {
+GameState::~GameState()
+{
 
     for (int i = 0; i < bt_collision_world->getNumCollisionObjects(); i++) {
 

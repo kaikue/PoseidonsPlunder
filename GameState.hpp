@@ -150,17 +150,22 @@ public:
 
     void update(float time);
 
-    // bullet related members
+
 private:
+    std::unordered_map<uint32_t, float> harpoon_time;
+
+    // bullet related members
     static constexpr double scene_size = 500;
     static constexpr unsigned int max_objects = 16000;
     static constexpr double player_sphere_radius = 0.9;
-    static constexpr float harpoon_vel = 5.0f;
+    static constexpr float harpoon_vel = 6.0f;
+    static constexpr double harpoon_length = 0.5;
+    static constexpr double harpoon_radius = 0.01;
 
     btCollisionConfiguration *bt_collision_configuration;
     btCollisionDispatcher *bt_dispatcher;
     btBroadphaseInterface *bt_broadphase;
     btCollisionWorld *bt_collision_world;
 
-    std::unordered_map<uint32_t, btCollisionObject *> player_collisions;
+    std::unordered_map<uint32_t, std::pair<btCollisionObject *, btCollisionObject *>> player_collisions;
 };
