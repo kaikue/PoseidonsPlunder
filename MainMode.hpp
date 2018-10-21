@@ -43,11 +43,19 @@ struct MainMode : public Mode {
 
     GameState state;
 
-    Controls controls;
+    struct Controls {
+        bool fwd = false;   // vv
+        bool back = false;  // these 4 only of internal interest
+        bool left = false;
+        bool right = false; // ^^
+        bool fire = false;
+        bool grab = false;
+    } controls;
 
     bool mouse_captured = false;
 
     glm::vec3 player_up, player_right;
+    uint32_t player_id;
     Scene::Transform *player_trans = nullptr;
     Scene::Transform *debug_trans = nullptr;
     Scene::Transform *gun_trans = nullptr;

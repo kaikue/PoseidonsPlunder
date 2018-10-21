@@ -9,12 +9,15 @@
 #include <vector>
 #include <btBulletDynamicsCommon.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include "read_chunk.hpp"
 
 struct Player {
     glm::vec3 position;
     glm::vec3 velocity;
-    glm::quat orientation;
+    glm::quat rotation;
     int team;
     bool has_treasure_1;
     bool has_treasure_2;
@@ -25,10 +28,11 @@ struct Player {
 };
 
 struct Harpoon {
-    int player_id; //who fired it- can this just be determined from index in list?
+    uint32_t player_id; //who fired it- can this just be determined from index in list?
     //int team; //can be determined from player_id
     int state; //0: held, 1: firing, 2: landed, 3: retracting
     glm::vec3 position; //used when firing, landed, retracting
+    glm::quat rotation; //used when firing, landed, retracting
     glm::vec3 velocity; //used when firing, retracting
 };
 
@@ -36,15 +40,6 @@ struct Treasure {
   int team;
   glm::vec3 position;
   int held_by = -1; //player_id of holding player, or -1 if not held
-};
-
-struct Controls {
-    bool fwd = false;   // vv
-    bool back = false;  // these 4 only of internal interest
-    bool left = false;
-    bool right = false; // ^^
-    bool fire = false;
-    bool grab = false;
 };
 
 struct CollisionMeshBuffer {
@@ -122,16 +117,28 @@ struct CollisionMeshBuffer {
     }
 };
 
+/**
+ *
+ * @param transform
+ * @return position and rotation normalized with scale
+ */
+inline std::pair<glm::vec3, glm::quat> get_pos_rot(const glm::mat4 transform) {
+    glm::vec3 position, scale, skew;
+    glm::vec4 persp;
+    glm::quat rotation;
+    glm::decompose(transform, scale, rotation, position, skew, persp);
+    return {position / scale, rotation};
+}
+
 struct GameState {
 public:
     int player_count;
     std::unordered_map<uint32_t, uint32_t> ready_to_start;
     std::unordered_map<uint32_t, Player> players;
-    std::unordered_map<uint32_t, Controls> player_controls;
     std::unordered_map<uint32_t, Harpoon> harpoons;
     Treasure treasures[2];
 
-    glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player;
+    glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player;
     
     int NICKNAME_LENGTH = 12;
 
@@ -148,6 +155,7 @@ private:
     static constexpr double scene_size = 500;
     static constexpr unsigned int max_objects = 16000;
     static constexpr double player_sphere_radius = 0.9;
+    static constexpr float harpoon_vel = 5.0f;
 
     btCollisionConfiguration *bt_collision_configuration;
     btCollisionDispatcher *bt_dispatcher;

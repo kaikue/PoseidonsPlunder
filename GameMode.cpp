@@ -126,7 +126,7 @@ void GameMode::send_action(Connection *c) {
 
     glm::vec3 pos = player.position;
     glm::vec3 vel = player.velocity;
-    glm::quat rot = player.orientation;
+    glm::quat rot = player.rotation;
 
     c->send(pos.x);
     c->send(pos.y);
@@ -199,10 +199,10 @@ void GameMode::poll_server() {
               memcpy(&state.players[i].velocity.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].velocity.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 4) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].velocity.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 5) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-              memcpy(&state.players[i].orientation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].rotation.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].rotation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].rotation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              memcpy(&state.players[i].rotation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
 
               memcpy(&state.harpoons[i].state,      c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
               memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));

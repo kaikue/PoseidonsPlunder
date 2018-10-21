@@ -16,7 +16,6 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 #include <iostream>
@@ -49,6 +48,11 @@ static std::string harpoon_mesh_name;
 static std::string player_mesh_name;
 
 static Scene *current_scene = nullptr;
+
+static inline void get_transform()
+{
+
+}
 
 Load<Scene> scene(LoadTagDefault, []()
 {
@@ -108,42 +112,43 @@ Load<Scene> scene(LoadTagDefault, []()
 MainMode::MainMode()
     : state()
 {
+    player_id = 0;
 
-    state.add_player(0);
-    std::cout << glm::to_string(glm::eulerAngles(state.players.at(0).orientation)) << std::endl;
+    state.add_player(player_id);
+    std::cout << glm::to_string(glm::eulerAngles(state.players.at(player_id).rotation)) << std::endl;
 
     player_up = glm::vec3(0.0f, 0.0f, 1.0f);
     player_right = glm::vec3(1.0f, 0.0f, 0.0f);
 
     // spawn in player transform and lock in camera
     player_trans = current_scene->new_transform();
-    player_trans->position = state.players.at(0).position;
-    player_trans->rotation = state.players.at(0).orientation;
+    player_trans->position = state.players.at(player_id).position;
+    // player transformation rotation is always 0
+    player_trans->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
     {
-        glm::vec3 cam_position, cam_scale, cam_skew;
-        glm::vec4 cam_persp;
-        glm::quat cam_rotation;
-        glm::decompose(state.camera_offset_to_player, cam_scale, cam_rotation, cam_position, cam_skew, cam_persp);
         camera->transform->set_parent(player_trans);
-        camera->transform->position = cam_position;
-        camera->transform->rotation = cam_rotation;
-        camera->transform->scale = cam_scale;
-        elevation = glm::pitch(cam_rotation);
-        azimuth = glm::roll(cam_rotation);
+        camera->transform->set_transform(state.camera_offset_to_player);
+
+        // camera rotated according to game state demands
+        camera->transform->rotation *= state.players.at(player_id).rotation;
+        elevation = glm::pitch(camera->transform->rotation);
+        azimuth = glm::roll(camera->transform->rotation);
     }
 
     // spawn in gun and harpoon
     {
-        glm::vec3 gun_position, gun_scale, gun_skew;
-        glm::vec4 gun_persp;
-        glm::quat gun_rotation;
-        glm::decompose(state.gun_offset_to_player, gun_scale, gun_rotation, gun_position, gun_skew, gun_persp);
         gun_trans = current_scene->new_transform();
-        gun_trans->set_parent(player_trans);
-        gun_trans->position = gun_position;
-        gun_trans->rotation = gun_rotation;
-        gun_trans->scale = gun_scale;
+
+        glm::vec3 position = state.players.at(player_id).position;
+        glm::quat rotation = state.players.at(player_id).rotation;
+
+        glm::mat4 rot = glm::toMat4(rotation);
+        glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
+        glm::mat4 final = trans * rot;
+
+        glm::mat4 gun_to_world = final * state.gun_offset_to_player;
+        gun_trans->set_transform(gun_to_world);
 
         Scene::Object *gun_obj = current_scene->new_object(gun_trans);
 
@@ -158,26 +163,20 @@ MainMode::MainMode()
     }
 
     {
-        glm::vec3 harpoon_position, harpoon_scale, harpoon_skew;
-        glm::vec4 harpoon_persp;
-        glm::quat harpoon_rotation;
-        glm::decompose(state.default_harpoon_offset_to_gun, harpoon_scale, harpoon_rotation, harpoon_position, harpoon_skew, harpoon_persp);
         harpoon_trans = current_scene->new_transform();
-        harpoon_trans->set_parent(gun_trans);
-        harpoon_trans->position = harpoon_position;
-        harpoon_trans->rotation = harpoon_rotation;
-        harpoon_trans->scale = harpoon_scale;
+        harpoon_trans->position = state.harpoons.at(player_id).position;
+        harpoon_trans->rotation = state.harpoons.at(player_id).rotation;
 
-        Scene::Object *gun_obj = current_scene->new_object(harpoon_trans);
+        Scene::Object *harpoon_obj = current_scene->new_object(harpoon_trans);
 
-        gun_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+        harpoon_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
 
         MeshBuffer::Mesh const &mesh = meshes->lookup(harpoon_mesh_name);
-        gun_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
-        gun_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+        harpoon_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+        harpoon_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
 
-        gun_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
-        gun_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+        harpoon_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+        harpoon_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
 
 }
@@ -244,13 +243,8 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             azimuth -= yaw;
             elevation -= pitch;
 
+            /// Build a quaternion from euler angles (pitch, yaw, roll), in radians.
             camera->transform->rotation = glm::quat(glm::vec3(elevation, 0.0f, azimuth));
-            std::cout << "camera rotation: " << glm::to_string(glm::eulerAngles(glm::quat(camera->transform->rotation))) << std::endl;
-
-            glm::vec3 gun_rpy = glm::eulerAngles(camera->transform->rotation) + glm::vec3(float(M_PI_2), float(M_PI), 0.0f);
-            gun_trans->rotation = glm::normalize(glm::quat(glm::vec3(-gun_rpy.x, gun_rpy.y, gun_rpy.z)));
-
-            std::cout << "gun rotation: " << glm::to_string(glm::eulerAngles(glm::quat(gun_trans->make_local_to_world()))) << std::endl;
             return true;
         }
     }
@@ -259,7 +253,6 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 void MainMode::update(float elapsed)
 {
-    float offset = 0.5f * elapsed;
     glm::mat3 directions = camera->transform->make_local_to_world();
     float amt = 5.0f * elapsed;
     if (controls.right) player_trans->position += amt * directions[0];
@@ -267,15 +260,33 @@ void MainMode::update(float elapsed)
     if (controls.back) player_trans->position += amt * directions[2];
     if (controls.fwd) player_trans->position -= amt * directions[2];
     if (controls.fire) {
-        state.player_controls.at(0).fire = true;
-
+        state.players.at(player_id).shot_harpoon = true;
     }
 
-    state.players.at(0).position = player_trans->position;
+    static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;
 
+    state.players.at(player_id).position = player_trans->position;
+    state.players.at(player_id).rotation = glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
+
+    // update gun position & rotation
+    {
+        glm::vec3 position = state.players.at(player_id).position;
+        glm::quat rotation = state.players.at(player_id).rotation;
+
+        glm::mat4 rot = glm::toMat4(rotation);
+        glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
+        glm::mat4 final = trans * rot;
+
+        glm::mat4 gun_to_world = final * state.gun_offset_to_player;
+        gun_trans->set_transform(gun_to_world);
+    }
+
+//    gun_trans->rotation = state.players.at(player_id).rotation * glm::quat(glm::vec3(0.0f, 0.0f, float(M_PI)));
     state.update(elapsed);
 
-    player_trans->position = state.players.at(0).position;
+    player_trans->position = state.players.at(player_id).position;
+    harpoon_trans->position = state.harpoons.at(player_id).position;
+    harpoon_trans->rotation = state.harpoons.at(player_id).rotation;
 
 }
 

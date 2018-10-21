@@ -32,6 +32,8 @@ struct Scene {
 		//Add transform to the child list of 'parent', before child 'before' (or at end, if 'before' is not given):
 		void set_parent(Transform *parent, Transform *before = nullptr);
 
+		void set_transform(const glm::mat4 transform);
+
 		//helper that checks local pointer consistency:
 		void DEBUG_assert_valid_pointers() const;
 

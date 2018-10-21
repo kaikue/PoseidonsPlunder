@@ -4,6 +4,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+
 #include <iostream>
 #include <fstream>
 
@@ -99,6 +102,17 @@ void Scene::Transform::set_parent(Transform *new_parent, Transform *before) {
 		if (prev_sibling) prev_sibling->next_sibling = this;
 	}
 	DEBUG_assert_valid_pointers();
+}
+
+void Scene::Transform::set_transform(const glm::mat4 transform)
+{
+	glm::vec3 position, scale, skew;
+	glm::vec4 persp;
+	glm::quat rotation;
+	glm::decompose(transform, scale, rotation, position, skew, persp);
+	this->position = position;
+	this->rotation = rotation;
+	this->scale = scale;
 }
 
 //---------------------------

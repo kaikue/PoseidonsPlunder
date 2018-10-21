@@ -8,6 +8,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -71,6 +73,8 @@ GameState::GameState() {
         }
     });
 
+    default_harpoon_to_player = gun_offset_to_player * default_harpoon_offset_to_gun;
+
     //look up the camera:
     for (Scene::Camera *c = level.first_camera; c != nullptr; c = c->alloc_next) {
         if (c->transform->name == "Camera") {
@@ -84,7 +88,11 @@ void GameState::add_player(uint32_t id) {
     glm::vec3 player_at = glm::vec3(0.0f, -14.0f, 2.0f);
 
     glm::vec3 position = player_at;
-    glm::quat rotation = glm::quat(0.0f, 0.0f, 0.0f, 1.0f);
+    glm::quat rotation = glm::quat(glm::vec3(0.0f, float(M_PI_2), 0.0f));
+
+    glm::mat4 rot = glm::toMat4(rotation);
+    glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
+    glm::mat4 final = trans * rot;
 
     // add player collision mesh
     {
@@ -100,21 +108,32 @@ void GameState::add_player(uint32_t id) {
         player_collisions[id] = object;
     }
 
+    glm::mat4 harpoon_to_world = final * default_harpoon_to_player;
+    auto harpoon_pos_rot = get_pos_rot(harpoon_to_world);
+
     players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test"};
-    player_controls[id] = {false, false, false, false, false, false};
+    harpoons[id] = {id, 0, harpoon_pos_rot.first, harpoon_pos_rot.second, glm::vec3(0.0f)};
 }
 
 void GameState::update(float time) {
 
+    // handling harpoon firing event
+    for (auto &pair : players) {
+        if (pair.second.shot_harpoon) {
+            harpoons.at(pair.first).state = 1;
+            harpoons.at(pair.first).velocity = glm::normalize(glm::toMat3(pair.second.rotation)[1]) * harpoon_vel;
+            pair.second.shot_harpoon = false;
+        }
+    }
+
     for (auto const &pair : player_collisions) {
         glm::vec3 position = players.at(pair.first).position;
-        glm::quat rotation = players.at(pair.first).orientation;
+        glm::quat rotation = players.at(pair.first).rotation;
 
         pair.second->setWorldTransform(
                 btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                             btVector3(position.x, position.y, position.z)));
 
-//        std::cout << "player position: " << glm::to_string(position) << std::endl;
     }
 
     //Perform collision detection
@@ -164,7 +183,28 @@ void GameState::update(float time) {
             players.at(collision_player_id).position += glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
 //            std::cout << rebound_vec.x() << ", " << rebound_vec.y() << ", " << rebound_vec.z() << std::endl;
 //            std::cout << "after collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+        }
+    }
 
+    // handle harpoon position update
+    for (auto &pair : harpoons) {
+        if (pair.second.state == 0) {
+            // held by player
+            glm::vec3 position = players.at(pair.first).position;
+            glm::quat rotation = players.at(pair.first).rotation;
+
+            glm::mat4 rot = glm::toMat4(rotation);
+            glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
+            glm::mat4 final = trans * rot;
+
+            glm::mat4 harpoon_to_world = final * default_harpoon_to_player;
+            auto harpoon_pos_rot = get_pos_rot(harpoon_to_world);
+
+            pair.second.position = harpoon_pos_rot.first;
+            pair.second.rotation = harpoon_pos_rot.second;
+        } else if (pair.second.state == 1) {
+            // fired
+            pair.second.position += pair.second.velocity * time;
         }
     }
 }

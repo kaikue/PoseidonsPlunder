@@ -33,7 +33,7 @@ void send_state(Connection *c, GameState *state, int player_id) {
     for (int i = 0; i < state->player_count; i++) {
       glm::vec3 pos = state->players[i].position;
       glm::vec3 vel = state->players[i].velocity;
-      glm::quat rot = state->players[i].orientation;
+      glm::quat rot = state->players[i].rotation;
       c->send(pos.x);
       c->send(pos.y);
       c->send(pos.z);
@@ -156,10 +156,10 @@ int main(int argc, char **argv) {
             memcpy(&player_data->velocity.x, c->recv_buffer.data() + 1 + 3 * sizeof(float), sizeof(float));
             memcpy(&player_data->velocity.y, c->recv_buffer.data() + 1 + 4 * sizeof(float), sizeof(float));
             memcpy(&player_data->velocity.z, c->recv_buffer.data() + 1 + 5 * sizeof(float), sizeof(float));
-            memcpy(&player_data->orientation.x, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
-            memcpy(&player_data->orientation.y, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
-            memcpy(&player_data->orientation.z, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
-            memcpy(&player_data->orientation.w, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.x, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.y, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.z, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.w, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
             memcpy(&player_data->shot_harpoon, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
             memcpy(&player_data->grab, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
 
