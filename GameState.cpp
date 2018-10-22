@@ -340,9 +340,9 @@ void GameState::update(float time)
 
     // handle harpoon position update
     for (auto &pair : harpoons) {
-        std::cout << "harpoon state: " << pair.second.state << ", position: " << glm::to_string(pair.second.position)
-                  << ", rotation: " << glm::to_string(glm::eulerAngles(pair.second.rotation))
-                  << ", velocity: " << glm::to_string(pair.second.velocity) << std::endl;
+//        std::cout << "harpoon state: " << pair.second.state << ", position: " << glm::to_string(pair.second.position)
+//                  << ", rotation: " << glm::to_string(glm::eulerAngles(pair.second.rotation))
+//                  << ", velocity: " << glm::to_string(pair.second.velocity) << std::endl;
         if (pair.second.state == 0) {
             // held by player
             glm::mat4 harpoon_to_world = get_transform(players.at(pair.first).position, players.at(pair.first).rotation)
@@ -364,6 +364,12 @@ void GameState::update(float time)
         }
         else if (pair.second.state == 2) {
             // landed, update timer for grab mechanic
+            if (harpoons_grab_timer.at(pair.first) >= time_before_grab_retract) {
+                pair.second.state = 3;
+                harpoons_grab_timer.at(pair.first) = 0.0f;
+            } else {
+                harpoons_grab_timer.at(pair.first) += time;
+            }
         }
         else if (pair.second.state == 3) {
             //retracting state
