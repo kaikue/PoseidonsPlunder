@@ -5,11 +5,7 @@
 #include "data_path.hpp" //helper to get paths relative to executable
 #include <iostream>
 
-#define GLM_ENABLE_EXPERIMENTAL
-
 #include <glm/gtx/string_cast.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -99,10 +95,6 @@ void GameState::add_player(uint32_t id)
     glm::vec3 position = player_at;
     glm::quat rotation = glm::quat(glm::vec3(0.0f, float(M_PI_2), 0.0f));
 
-    glm::mat4 rot = glm::toMat4(rotation);
-    glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
-    glm::mat4 final = trans * rot;
-
     players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test"};
 
     // add player collision mesh
@@ -119,7 +111,7 @@ void GameState::add_player(uint32_t id)
         bt_collision_world->addCollisionObject(player_object);
     }
 
-    glm::mat4 harpoon_to_world = final * default_harpoon_to_player;
+    glm::mat4 harpoon_to_world = get_transform(position, rotation) * default_harpoon_to_player;
     auto harpoon_pos_rot = get_pos_rot(harpoon_to_world);
     harpoons[id] = {id, 0, harpoon_pos_rot.first, harpoon_pos_rot.second, glm::vec3(0.0f)};
 
@@ -142,7 +134,7 @@ void GameState::add_player(uint32_t id)
     }
 
     player_collisions[id] = {player_object, harpoon_object};
-    harpoon_time[id] = 0.0f;
+    harpoons_grab_timer[id] = 0.0f;
 }
 
 void GameState::handle_harpoon_collision(const btCollisionObject *harpoon_obj,
@@ -152,8 +144,8 @@ void GameState::handle_harpoon_collision(const btCollisionObject *harpoon_obj,
 {
     auto harpoon = ((Harpoon *) harpoon_obj->getUserPointer());
 
-    if (harpoon->state == 0) {
-        // harpoon held in gun, so collision is ignored
+    if (harpoon->state == 0 || harpoon->state == 3) {
+        // harpoon held in gun or retracting, so collision is ignored
         return;
     }
 
@@ -348,16 +340,13 @@ void GameState::update(float time)
 
     // handle harpoon position update
     for (auto &pair : harpoons) {
+        std::cout << "harpoon state: " << pair.second.state << ", position: " << glm::to_string(pair.second.position)
+                  << ", rotation: " << glm::to_string(glm::eulerAngles(pair.second.rotation))
+                  << ", velocity: " << glm::to_string(pair.second.velocity) << std::endl;
         if (pair.second.state == 0) {
             // held by player
-            glm::vec3 position = players.at(pair.first).position;
-            glm::quat rotation = players.at(pair.first).rotation;
-
-            glm::mat4 rot = glm::toMat4(rotation);
-            glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
-            glm::mat4 final = trans * rot;
-
-            glm::mat4 harpoon_to_world = final * default_harpoon_to_player;
+            glm::mat4 harpoon_to_world = get_transform(players.at(pair.first).position, players.at(pair.first).rotation)
+                * default_harpoon_to_player;
             auto harpoon_pos_rot = get_pos_rot(harpoon_to_world);
 
             pair.second.position = harpoon_pos_rot.first;
@@ -365,7 +354,37 @@ void GameState::update(float time)
         }
         else if (pair.second.state == 1) {
             // fired
-            pair.second.position += pair.second.velocity * time;
+            if (glm::distance(pair.second.position, players.at(pair.first).position) >= dist_before_retract) {
+                // retract if too far away from player
+                pair.second.state = 3;
+            }
+            else {
+                pair.second.position += pair.second.velocity * time;
+            }
+        }
+        else if (pair.second.state == 2) {
+            // landed, update timer for grab mechanic
+        }
+        else if (pair.second.state == 3) {
+            //retracting state
+            glm::mat4 gun_to_world =
+                get_transform(players.at(pair.first).position, players.at(pair.first).rotation)
+                    * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f * harpoon_length, 0.0f))
+                    * default_harpoon_to_player;
+            auto gun_pos_rot = get_pos_rot(gun_to_world);
+
+            glm::mat4 harpoon_back_to_world = get_transform(pair.second.position, pair.second.rotation)
+                * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5f * harpoon_length));
+            auto harpoon_back_pos_rot = get_pos_rot(harpoon_back_to_world);
+
+            if (glm::distance(gun_pos_rot.first, harpoon_back_pos_rot.first) < 0.1) {
+                pair.second.state = 0;
+            }
+            else {
+//                pair.second.rotation = glm::quatLookAt(harpoon_back_pos_rot.first - gun_pos_rot.first, glm::vec3(0.0f, 1.0f, 0.0f));
+                pair.second.velocity = glm::normalize(gun_pos_rot.first - harpoon_back_pos_rot.first) * harpoon_vel;
+                pair.second.position += pair.second.velocity * time;
+            }
         }
     }
 }

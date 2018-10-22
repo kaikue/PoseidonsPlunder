@@ -135,14 +135,9 @@ MainMode::MainMode()
     {
         gun_trans = current_scene->new_transform();
 
-        glm::vec3 position = state.players.at(player_id).position;
-        glm::quat rotation = state.players.at(player_id).rotation;
-
-        glm::mat4 rot = glm::toMat4(rotation);
-        glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
-        glm::mat4 final = trans * rot;
-
-        glm::mat4 gun_to_world = final * state.gun_offset_to_player;
+        glm::mat4 gun_to_world =
+            get_transform(state.players.at(player_id).position, state.players.at(player_id).rotation)
+                * state.gun_offset_to_player;
         gun_trans->set_transform(gun_to_world);
 
         Scene::Object *gun_obj = current_scene->new_object(gun_trans);
@@ -261,21 +256,17 @@ void MainMode::update(float elapsed)
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;
 
     state.players.at(player_id).position = player_trans->position;
-    state.players.at(player_id).rotation = glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
+    state.players.at(player_id).rotation =
+        glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
 
 //    gun_trans->rotation = state.players.at(player_id).rotation * glm::quat(glm::vec3(0.0f, 0.0f, float(M_PI)));
     state.update(elapsed);
 
     // update gun position & rotation
     {
-        glm::vec3 position = state.players.at(player_id).position;
-        glm::quat rotation = state.players.at(player_id).rotation;
-
-        glm::mat4 rot = glm::toMat4(rotation);
-        glm::mat4 trans = glm::translate(glm::mat4(1.0f), position);
-        glm::mat4 final = trans * rot;
-
-        glm::mat4 gun_to_world = final * state.gun_offset_to_player;
+        glm::mat4 gun_to_world =
+            get_transform(state.players.at(player_id).position, state.players.at(player_id).rotation)
+                * state.gun_offset_to_player;
         gun_trans->set_transform(gun_to_world);
     }
 
