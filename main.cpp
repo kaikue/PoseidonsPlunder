@@ -5,9 +5,9 @@
 #include "Load.hpp"
 
 //The 'GameMode' mode plays the game:
-#include "GameMode.hpp"
+//#include "GameMode.hpp"
 
-//#include "MainMode.hpp"
+#include "MainMode.hpp"
 
 #include "Connection.hpp"
 
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
 #endif
 	struct {
 		//TODO: this is where you set the title and size of your game window
-		std::string title = "Indirect Pong";
+		std::string title = "Poseidon's Plunder";
 		glm::uvec2 size = glm::uvec2(800, 600);
 	} config;
 
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	Client client(argv[1], argv[2]);
+	//Client client(argv[1], argv[2]);
 
 	//------------  initialization ------------
 
@@ -120,8 +120,8 @@ int main(int argc, char **argv) {
 
 	//------------ create game mode + make current --------------
 
-	Mode::set_current(std::make_shared< GameMode >(client));
-	//Mode::set_current(std::make_shared< MainMode >());
+	//Mode::set_current(std::make_shared< GameMode >(client));
+	Mode::set_current(std::make_shared< MainMode >());
 
 	//------------ main loop ------------
 
