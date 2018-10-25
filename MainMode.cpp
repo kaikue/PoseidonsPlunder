@@ -47,6 +47,8 @@ static std::string harpoon_mesh_name;
 
 static std::string player_mesh_name;
 
+static std::string rope_mesh_name;
+
 static Scene *current_scene = nullptr;
 
 Load<Scene> scene(LoadTagDefault, []()
@@ -79,6 +81,7 @@ Load<Scene> scene(LoadTagDefault, []()
         if (t->name == "Gun") gun_mesh_name = m;
         if (t->name == "Harpoon") harpoon_mesh_name = m;
         if (t->name == "Player") player_mesh_name = m;
+        if (t->name == "Rope") rope_mesh_name = m;
     });
 
     //look up the camera:

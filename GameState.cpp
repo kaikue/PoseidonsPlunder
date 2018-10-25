@@ -373,22 +373,22 @@ void GameState::update(float time)
         }
         else if (pair.second.state == 3) {
             //retracting state
-            glm::mat4 gun_to_world =
+            glm::mat4 default_gun_tip =
                 get_transform(players.at(pair.first).position, players.at(pair.first).rotation)
                     * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f * harpoon_length, 0.0f))
                     * default_harpoon_to_player;
-            auto gun_pos_rot = get_pos_rot(gun_to_world);
+            auto default_gun_tip_pos_rot = get_pos_rot(default_gun_tip);
 
             glm::mat4 harpoon_back_to_world = get_transform(pair.second.position, pair.second.rotation)
                 * glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -0.5f * harpoon_length));
             auto harpoon_back_pos_rot = get_pos_rot(harpoon_back_to_world);
 
-            if (glm::distance(gun_pos_rot.first, harpoon_back_pos_rot.first) < 0.1) {
+            if (glm::distance(default_gun_tip_pos_rot.first, harpoon_back_pos_rot.first) < 0.1) {
                 pair.second.state = 0;
             }
             else {
-//                pair.second.rotation = glm::quatLookAt(harpoon_back_pos_rot.first - gun_pos_rot.first, glm::vec3(0.0f, 1.0f, 0.0f));
-                pair.second.velocity = glm::normalize(gun_pos_rot.first - harpoon_back_pos_rot.first) * harpoon_vel;
+//                pair.second.rotation = glm::quatLookAt(harpoon_back_pos_rot.first - default_gun_tip_pos_rot.first, glm::vec3(0.0f, 1.0f, 0.0f));
+                pair.second.velocity = glm::normalize(default_gun_tip_pos_rot.first - harpoon_back_pos_rot.first) * harpoon_vel;
                 pair.second.position += pair.second.velocity * time;
             }
         }
