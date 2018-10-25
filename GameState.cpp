@@ -124,7 +124,7 @@ void GameState::add_player(uint32_t id)
                                      harpoon_pos_rot.second.z,
                                      harpoon_pos_rot.second.w),
                         btVector3(harpoon_pos_rot.first.x, harpoon_pos_rot.first.y, harpoon_pos_rot.first.z)));
-        auto *capsule = new btCylinderShapeZ(btVector3(harpoon_radius, 0, 0.5 * harpoon_length));
+        auto *capsule = new btCylinderShapeZ(btVector3((btScalar)harpoon_radius, 0, (btScalar)(0.5 * harpoon_length)));
         harpoon_object->setCollisionShape(capsule);
 
         // set additional pointer to harpoon for identification
