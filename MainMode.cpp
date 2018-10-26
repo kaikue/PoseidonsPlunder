@@ -27,7 +27,7 @@
 
 Load<MeshBuffer> meshes(LoadTagDefault, []()
 {
-    return new MeshBuffer(data_path("test_level.pnc"));
+    return new MeshBuffer(data_path("test_level_complex.pnc"));
 });
 
 Load<GLuint> meshes_for_vertex_color_program(LoadTagDefault, []()
@@ -65,7 +65,7 @@ Load<Scene> scene(LoadTagDefault, []()
     vertex_color_program_info->itmv_mat3 = vertex_color_program->normal_to_light_mat3;
 
     //load transform hierarchy:
-    ret->load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
+    ret->load(data_path("test_level_complex.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
     {
         Scene::Object *obj = s.new_object(t);
 
@@ -112,7 +112,7 @@ MainMode::MainMode()
 {
     player_id = 0;
 
-    state.add_player(player_id);
+    state.add_player(player_id, 0);
     std::cout << glm::to_string(glm::eulerAngles(state.players.at(player_id).rotation)) << std::endl;
 
     player_up = glm::vec3(0.0f, 0.0f, 1.0f);

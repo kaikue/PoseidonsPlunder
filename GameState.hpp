@@ -170,7 +170,7 @@ public:
 
     GameState();
 
-    void add_player(uint32_t id);
+    void add_player(uint32_t id, uint32_t team);
 
     ~GameState();
 
@@ -183,6 +183,9 @@ private:
     static constexpr float dist_before_retract = 20.0f;
     static constexpr float time_before_grab_retract = 1.0f;
     static constexpr float harpoon_vel = 6.0f;
+    glm::vec3 team_spawns_pos[2];
+    glm::quat team_spawns_rot[2];
+    glm::vec3 treasure_spawns[2];
 
     // bullet related members
     static constexpr double scene_size = 500;
@@ -196,6 +199,7 @@ private:
     btBroadphaseInterface *bt_broadphase;
     btCollisionWorld *bt_collision_world;
 
+    std::unordered_map<std::string, btBvhTriangleMeshShape *> collision_meshes;
     std::unordered_map<uint32_t, std::pair<btCollisionObject *, btCollisionObject *>> player_collisions;
 
     enum class HarpoonCollision
