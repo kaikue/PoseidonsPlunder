@@ -168,7 +168,9 @@ int main(int argc, char **argv) {
         }
       }
     }, 0.01);
-		
+
+    std::cout << "Looping" << std::endl;
+    
     //based on https://stackoverflow.com/a/14391562
     auto now = std::chrono::high_resolution_clock::now();
     float diff = std::chrono::duration_cast<std::chrono::duration<float>>(now - then).count();

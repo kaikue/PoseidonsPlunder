@@ -16,6 +16,8 @@
 
 Load<CollisionMeshBuffer> meshes_for_collision(LoadTagDefault, []()
 {
+  std::cout << "loading meshes" << std::endl;
+  std::cout << data_path("test_level.collision") << std::endl;
     return new CollisionMeshBuffer(data_path("test_level.collision"));
 });
 
@@ -33,6 +35,7 @@ GameState::GameState()
 
     bt_collision_world = new btCollisionWorld(bt_dispatcher, bt_broadphase, bt_collision_configuration);
 
+    std::cout << "Loading scene" << std::endl;
     Scene level;
     //load all collision meshes
     level.load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
@@ -40,6 +43,7 @@ GameState::GameState()
         std::cout << t->name << ", " << m << std::endl;
 
         if (t->name == "Player") {
+            std::cout << "Loading player" << std::endl;
             auto *object = new btCollisionObject();
             object->setWorldTransform(
                 btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
@@ -47,16 +51,20 @@ GameState::GameState()
             auto *sphere = new btSphereShape((btScalar) player_sphere_radius);
             object->setCollisionShape(sphere);
             bt_collision_world->addCollisionObject(object);
-
         }
         else if (t->name.find("CL") != std::string::npos) {
-
+            std::cout << "Loading collision" << std::endl;
+            while (!meshes_for_collision) {
+              std::cout << "Meshes not loaded yet!!!" << std::endl;
+            }
             CollisionMeshBuffer::CollisionMesh const &mesh = meshes_for_collision->lookup(m);
-
+            std::cout << "Collision A" << std::endl;
             auto *object = new btCollisionObject();
+            std::cout << "Collision B" << std::endl;
             object->setWorldTransform(
                 btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
                             btVector3(t->position.x, t->position.y, t->position.z)));
+            std::cout << "Collision 1" << std::endl;
             btStridingMeshInterface *tri_array = new btTriangleIndexVertexArray((int) mesh.triangle_count,
                                                                                 (int *) &(meshes_for_collision
                                                                                     ->triangles[mesh.triangle_start].x),
@@ -66,17 +74,21 @@ GameState::GameState()
                                                                                     ->vertices[mesh.vertex_start].x),
                                                                                 (int) sizeof(glm::vec3));
             auto *mesh_shape = new btBvhTriangleMeshShape(tri_array, true);
+            std::cout << "Collision 2" << std::endl;
             object->setCollisionShape(mesh_shape);
             bt_collision_world->addCollisionObject(object);
         }
         else if (t->name == "Gun") {
+          std::cout << "Loading Gun" << std::endl;
             gun_offset_to_player = t->make_local_to_parent();
         }
         else if (t->name == "Harpoon") {
+          std::cout << "Loading harpoon" << std::endl;
             default_harpoon_offset_to_gun = t->make_local_to_parent();
         }
+        std::cout << "Loaded" << std::endl;
     });
-
+    std::cout << "Done loading" << std::endl;
     default_harpoon_to_player = gun_offset_to_player * default_harpoon_offset_to_gun;
 
     //look up the camera:
@@ -85,7 +97,6 @@ GameState::GameState()
             camera_offset_to_player = c->transform->make_local_to_parent();
         }
     }
-
 }
 
 void GameState::add_player(uint32_t id)
