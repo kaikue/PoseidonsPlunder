@@ -27,7 +27,7 @@
 
 Load<MeshBuffer> meshes(LoadTagDefault, []()
 {
-    return new MeshBuffer(data_path("test_level.pnc"));
+    return new MeshBuffer(data_path("test_level_complex_v2.pnc"));
 });
 
 Load<GLuint> meshes_for_vertex_color_program(LoadTagDefault, []()
@@ -65,7 +65,7 @@ Load<Scene> scene(LoadTagDefault, []()
     vertex_color_program_info->itmv_mat3 = vertex_color_program->normal_to_light_mat3;
 
     //load transform hierarchy:
-    ret->load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
+    ret->load(data_path("test_level_complex_v2.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
     {
         Scene::Object *obj = s.new_object(t);
 

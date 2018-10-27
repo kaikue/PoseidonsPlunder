@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-LEVEL=$1
+# LEVEL=$1
+LEVEL=test_level_complex_v2
 
 blender="/Applications/Blender/blender.app/Contents/MacOS/blender"
 

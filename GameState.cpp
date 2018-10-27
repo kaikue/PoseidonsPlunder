@@ -16,7 +16,7 @@
 
 Load<CollisionMeshBuffer> meshes_for_collision(LoadTagDefault, []()
 {
-    return new CollisionMeshBuffer(data_path("test_level.collision"));
+    return new CollisionMeshBuffer(data_path("test_level_complex_v2.collision"));
 });
 
 GameState::GameState()
@@ -35,7 +35,7 @@ GameState::GameState()
 
     Scene level;
     //load all collision meshes
-    level.load(data_path("test_level.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
+    level.load(data_path("test_level_complex_v2.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
     {
         std::cout << t->name << ", " << m << std::endl;
 
@@ -217,11 +217,11 @@ void GameState::handle_player_collision(const btCollisionObject *player_obj,
                 rebound_vec = (ptB - ptA) * (btScalar) ((ptdist > 0) - (ptdist < 0));
             }
 
-//            std::cout << "before collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+        //    std::cout << "before collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
             ((Player *) player_obj->getUserPointer())->position +=
                 glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
-//            std::cout << rebound_vec.x() << ", " << rebound_vec.y() << ", " << rebound_vec.z() << std::endl;
-//            std::cout << "after collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
+           std::cout << rebound_vec.x() << ", " << rebound_vec.y() << ", " << rebound_vec.z() << std::endl;
+        //    std::cout << "after collision: " << glm::to_string(players.at(collision_player_id).position) << std::endl;
 
             if (type == PlayerCollision::Player) {
                 // handle player on player collision
