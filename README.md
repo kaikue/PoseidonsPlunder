@@ -27,8 +27,7 @@ Server movement validation:
 ## Kai's TODO
 - Add lobby state to establish # players
 - remove cout's
-- remove pos.x = 1 in GameMode::send_action
 - make everything use Translation struct and sizeof()
 	- send harpoon rotations
-- add right click to grapple control
-- properly deal with collision meshes not loading on server
+	- static_assert its size somewhere
+- add/send right click to grapple control
