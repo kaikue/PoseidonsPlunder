@@ -127,7 +127,7 @@ void GameMode::send_action(Connection *c) {
     glm::vec3 pos = player.position;
     glm::vec3 vel = player.velocity;
     glm::quat rot = player.rotation;
-
+    pos.x = 1;
     c->send(pos.x);
     c->send(pos.y);
     c->send(pos.z);
@@ -141,14 +141,18 @@ void GameMode::send_action(Connection *c) {
 
     c->send(controls.fire);
     c->send(controls.grab);
+
+    //std::cout << "Sending (" << pos.x << ", " << pos.y << ", " << pos.z << "), etc..." << std::endl;
   }
 }
 
 void GameMode::poll_server() {
+  std::cout << "poll_server" << std::endl;
   //poll server for current game state
   client.poll([&](Connection *c, Connection::Event event) {
     if (event == Connection::OnOpen) {
       //probably won't get this.
+      std::cout << "Opened connection" << std::endl;
     }
     else if (event == Connection::OnClose) {
       std::cerr << "Lost connection to server." << std::endl;
@@ -156,6 +160,7 @@ void GameMode::poll_server() {
     else {
       while (!(c->recv_buffer.empty())) {
         assert(event == Connection::OnRecv);
+        std::cout << "Client receive" << std::endl;
         // game begins
         if (c->recv_buffer[0] == 'b') {
           if (c->recv_buffer.size() < 1 + 2 * sizeof(int)) {
@@ -184,6 +189,7 @@ void GameMode::poll_server() {
 
         // in game
         else {
+          std::cout << "Receiving info..." << std::endl;
           assert(c->recv_buffer[0] == 's');
           if (c->recv_buffer.size() < 1 + (state.player_count + 1) * sizeof(bool) + (3 + state.player_count) * sizeof(float) + 1 * sizeof(int)) {
             return; //wait for more data
@@ -203,6 +209,7 @@ void GameMode::poll_server() {
               memcpy(&state.players[i].rotation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].rotation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].rotation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              std::cout << "Received (" << state.players[i].position.x << ", " << state.players[i].position.y << ", " << state.players[i].position.z << "), etc..." << std::endl;
 
               memcpy(&state.harpoons[i].state,      c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
               memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
@@ -228,7 +235,7 @@ void GameMode::poll_server() {
         }
       }
     }
-  });
+  }, 0.01);
 }
 
 void GameMode::update(float elapsed) {

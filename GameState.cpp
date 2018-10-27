@@ -54,8 +54,9 @@ GameState::GameState()
         }
         else if (t->name.find("CL") != std::string::npos) {
             std::cout << "Loading collision" << std::endl;
-            while (!meshes_for_collision) {
+            if (!meshes_for_collision) { //TODO
               std::cout << "Meshes not loaded yet!!!" << std::endl;
+              return;
             }
             CollisionMeshBuffer::CollisionMesh const &mesh = meshes_for_collision->lookup(m);
             std::cout << "Collision A" << std::endl;

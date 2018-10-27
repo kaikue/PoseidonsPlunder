@@ -16,6 +16,14 @@
 
 #include "read_chunk.hpp"
 
+struct Translation {
+  //TODO: use this, static_assert the size somewhere
+  //Contains position, velocity, and rotation in one convenient struct
+  glm::vec3 position;
+  glm::vec3 velocity;
+  glm::quat rotation;
+};
+
 struct Player
 {
     glm::vec3 position;

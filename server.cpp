@@ -34,6 +34,7 @@ void send_state(Connection *c, GameState *state, int player_id) {
       glm::vec3 pos = state->players[i].position;
       glm::vec3 vel = state->players[i].velocity;
       glm::quat rot = state->players[i].rotation;
+      std::cout << "Sending (" << pos.x << ", " << pos.y << ", " << pos.z << "), etc..." << std::endl;
       c->send(pos.x);
       c->send(pos.y);
       c->send(pos.z);
@@ -51,7 +52,7 @@ void send_state(Connection *c, GameState *state, int player_id) {
 
       glm::vec3 harpoon_pos = state->harpoons[i].position;
       glm::vec3 harpoon_vel = state->harpoons[i].velocity;
-      //rotation can be determined from velocity so don't send that
+      glm::quat harpoon_rot = state->harpoons[i].rotation; //TODO
       c->send(harpoon_pos.x);
       c->send(harpoon_pos.y);
       c->send(harpoon_pos.z);
@@ -91,10 +92,12 @@ void update_server(GameState *state, std::unordered_map< Connection *, int > *pl
   //TODO: set state.player_count when starting game
 
   state->update(time);
-  //TODO: send state to all clients
-  /*for (pair<Connection *, int> p in player_ledger.firsts) {
-    send_state(p.first, state, p.second);
-  }*/
+  //send state to all clients
+  //for (std::pair<Connection *, int> p : player_ledger) {
+  for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
+    std::cout << "Sending to player " << iter->second << std::endl;
+    send_state(iter->first, state, iter->second);
+  }
 }
 
 int main(int argc, char **argv) {
@@ -118,25 +121,30 @@ int main(int argc, char **argv) {
     //get updates from clients
     server.poll([&](Connection *c, Connection::Event evt) {
       if (evt == Connection::OnOpen) {
+        std::cout << "Connection open" << std::endl;
         player_ledger.insert(std::make_pair(c, player_count));
         player_count++;
       }
       else if (evt == Connection::OnClose) {
+        std::cout << "Connection close" << std::endl;
         //lost connection with player :(
       }
       else {
+        std::cout << "Connection receive" << std::endl;
         assert(evt == Connection::OnRecv);
         uint32_t player_id = player_ledger.find(c)->second; // get player ID corresponding to connection
         Player* player_data = &state.players.find(player_id)->second;
         if (c->recv_buffer[0] == 'k') {
+          std::cout << "OK to start" << std::endl;
           c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1);
           ready_to_start.insert(std::make_pair(player_id, 1));
         }
         else if (c->recv_buffer[0] == 'n') {
           if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
-            return; //wait for more data      
+            return; //wait for more data
           }
           else {
+            std::cout << "Nickname/team update" << std::endl;
             memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
             memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * state.NICKNAME_LENGTH);
             c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * state.NICKNAME_LENGTH);
@@ -147,8 +155,11 @@ int main(int argc, char **argv) {
             return; //wait for more data
           }
           else {
+            //std::cout << "Player update" << std::endl;
             /* vv relocate to server "update"
             // assert((!has_tr_1 && !has_tr_2) || (has_tr_1 != has_tr_2)); // want to enforce {has neither treasure} or {can have one of two treasures}
+            // or just...
+            // assert !(has_tr_1 && has_tr_2); //want to enforce {doesn't have both treasures}
             */
             memcpy(&player_data->position.x, c->recv_buffer.data() + 1 + 0 * sizeof(float), sizeof(float));
             memcpy(&player_data->position.y, c->recv_buffer.data() + 1 + 1 * sizeof(float), sizeof(float));
@@ -164,20 +175,19 @@ int main(int argc, char **argv) {
             memcpy(&player_data->grab, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
 
             c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
+
+            //std::cout << "Received (" << player_data->position.x << ", " << player_data->position.y << ", " << player_data->position.z << "), etc..." << std::endl;
           }
         }
       }
     }, 0.01);
 
-    std::cout << "Looping" << std::endl;
-    
     //based on https://stackoverflow.com/a/14391562
     auto now = std::chrono::high_resolution_clock::now();
     float diff = std::chrono::duration_cast<std::chrono::duration<float>>(now - then).count();
 		if (diff > 0.05f) {
 			then = now;
-
-      update_server(&state, &player_ledger, diff);
+      update_server(&state, &player_ledger, diff); //TODO put back
 		}
 	}
 }
