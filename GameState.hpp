@@ -35,7 +35,10 @@ struct Player
     bool is_shot;
     bool shot_harpoon;
     bool grab;
-    std::string nickname;
+
+    static int NICKNAME_LENGTH = 12;
+
+    char nickname[NICKNAME_LENGTH];
 };
 
 struct Harpoon
@@ -173,8 +176,6 @@ public:
     Treasure treasures[2];
 
     glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player;
-
-    int NICKNAME_LENGTH = 12;
 
     GameState();
 
