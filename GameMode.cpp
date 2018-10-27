@@ -127,7 +127,6 @@ void GameMode::send_action(Connection *c) {
     glm::vec3 pos = player.position;
     glm::vec3 vel = player.velocity;
     glm::quat rot = player.rotation;
-
     c->send(pos.x);
     c->send(pos.y);
     c->send(pos.z);
@@ -141,6 +140,8 @@ void GameMode::send_action(Connection *c) {
 
     c->send(controls.fire);
     c->send(controls.grab);
+
+    //std::cout << "Sending (" << pos.x << ", " << pos.y << ", " << pos.z << "), etc..." << std::endl;
   }
 }
 
@@ -149,6 +150,7 @@ void GameMode::poll_server() {
   client.poll([&](Connection *c, Connection::Event event) {
     if (event == Connection::OnOpen) {
       //probably won't get this.
+      std::cout << "Opened connection" << std::endl;
     }
     else if (event == Connection::OnClose) {
       std::cerr << "Lost connection to server." << std::endl;
@@ -184,15 +186,20 @@ void GameMode::poll_server() {
 
         // in game
         else {
+          std::cout << "Receiving info..." << std::endl;
           assert(c->recv_buffer[0] == 's');
-          if (c->recv_buffer.size() < 1 + (state.player_count + 1) * sizeof(bool) + (3 + state.player_count) * sizeof(float) + 1 * sizeof(int)) {
+          if (c->recv_buffer.size() < 1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) {
+            std::cout << "Num players " << state.player_count << std::endl;
+            std::cout << "Buffer size " << c->recv_buffer.size() << ", should be " << (1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) << std::endl;
             return; //wait for more data
           }
           else {
+            std::cout << "Copying state" << std::endl;
             //TODO: if buffer length is more than twice the length of a full update, skip all but the last one
             memcpy(&player.is_shot, c->recv_buffer.data() + 1, sizeof(bool));
             // update the players and the harpoons
             for (int i = 0; i < state.player_count; i++) {
+              //TODO: don't update position if it's self and close enough?
               memcpy(&state.players[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].position.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 1) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].position.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 2) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
@@ -203,6 +210,7 @@ void GameMode::poll_server() {
               memcpy(&state.players[i].rotation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].rotation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].rotation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+              std::cout << "Player " << i << ": pos (" << state.players[i].position.x << ", " << state.players[i].position.y << ", " << state.players[i].position.z << "), etc..." << std::endl;
 
               memcpy(&state.harpoons[i].state,      c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
               memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
@@ -220,15 +228,16 @@ void GameMode::poll_server() {
               memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 3) * sizeof(float) + j * sizeof(int), sizeof(int));
             }
 
+            //1 for 's' char
             //1 bool for is_shot
             //player_count * 16 floats for pos(3), vel(3), rot(4), harpoon pos(3), and harpoon vel(3), plus 6 for two treasure pos(3)
             //player_count ints for harpoon states, plus 2 for two treasure held_by
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int));
+            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int));
           }
         }
       }
     }
-  });
+  }, 0.01);
 }
 
 void GameMode::update(float elapsed) {

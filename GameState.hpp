@@ -16,6 +16,14 @@
 
 #include "read_chunk.hpp"
 
+struct Translation {
+  //TODO: use this, static_assert the size somewhere
+  //Contains position, velocity, and rotation in one convenient struct
+  glm::vec3 position;
+  glm::vec3 velocity;
+  glm::quat rotation;
+};
+
 struct Player
 {
     glm::vec3 position;
@@ -27,7 +35,10 @@ struct Player
     bool is_shot;
     bool shot_harpoon;
     bool grab;
-    std::string nickname;
+
+    static int NICKNAME_LENGTH = 12;
+
+    char nickname[NICKNAME_LENGTH];
 };
 
 struct Harpoon
@@ -158,15 +169,13 @@ inline glm::mat4 get_transform(const glm::vec3 position, const glm::quat rotatio
 struct GameState
 {
 public:
-    int player_count;
+    int player_count = 2;
     std::unordered_map<uint32_t, uint32_t> ready_to_start;
     std::unordered_map<uint32_t, Player> players;
     std::unordered_map<uint32_t, Harpoon> harpoons;
     Treasure treasures[2];
 
     glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player;
-
-    int NICKNAME_LENGTH = 12;
 
     GameState();
 
