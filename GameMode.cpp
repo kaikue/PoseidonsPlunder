@@ -127,7 +127,6 @@ void GameMode::send_action(Connection *c) {
     glm::vec3 pos = player.position;
     glm::vec3 vel = player.velocity;
     glm::quat rot = player.rotation;
-    pos.x = 1;
     c->send(pos.x);
     c->send(pos.y);
     c->send(pos.z);
