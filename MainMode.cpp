@@ -233,6 +233,9 @@ bool MainMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             controls.right = (evt.type == SDL_KEYDOWN);
             return true;
         }
+        else if (evt.key.keysym.scancode == SDL_SCANCODE_E) {
+            controls.grab = (evt.type == SDL_KEYDOWN);
+        }
     }
 
     //handle tracking the mouse for rotation control:
@@ -285,6 +288,9 @@ void MainMode::update(float elapsed)
     if (controls.fwd) players_transform.at(player_id)->position -= amt * directions[2];
     if (controls.fire) {
         state.players.at(player_id).shot_harpoon = true;
+    }
+    if (controls.grab) {
+        state.players.at(player_id).grab = true;
     }
 
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;

@@ -129,6 +129,22 @@ GameState::GameState()
 
 }
 
+void GameState::add_treasure(uint32_t team)
+{
+    auto *treasure_object = new btCollisionObject();
+    {
+        treasure_object->setWorldTransform(
+            btTransform(btQuaternion(0.0f, 0.0f, 0.0f, 1.0f),
+                        btVector3(treasures[team].position.x, treasures[team].position.y, treasures[team].position.z)));
+        auto *box = new btBoxShape(treasure_dims * 0.5f);
+        treasure_object->setCollisionShape(box);
+
+        treasure_object->setUserIndex(team);
+        treasure_object->setUserPointer((void *) &treasures[team]);
+        bt_collision_world->addCollisionObject(treasure_object);
+    }
+}
+
 void GameState::add_player(uint32_t id, uint32_t team)
 {
     glm::vec3 player_at = team_spawns_pos[team];
@@ -281,6 +297,10 @@ void GameState::update(float time)
             harpoons.at(pair.first).state = 1;
             harpoons.at(pair.first).velocity = glm::normalize(glm::toMat3(pair.second.rotation)[1]) * harpoon_vel;
             pair.second.shot_harpoon = false;
+        }
+
+        if (pair.second.grab) {
+            pair.second.grab = false;
         }
     }
 

@@ -172,6 +172,8 @@ public:
 
     void add_player(uint32_t id, uint32_t team);
 
+    void add_treasure(uint32_t team);
+
     ~GameState();
 
     void update(float time);
@@ -186,6 +188,7 @@ private:
     glm::vec3 team_spawns_pos[2];
     glm::quat team_spawns_rot[2];
     glm::vec3 treasure_spawns[2];
+    btVector3 treasure_dims = {0.5f, 0.5f, 0.5f};
 
     // bullet related members
     static constexpr double scene_size = 500;
