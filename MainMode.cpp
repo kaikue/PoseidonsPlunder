@@ -70,21 +70,23 @@ Load<Scene> scene(LoadTagDefault, []()
     //load transform hierarchy:
     ret->load(data_path("test_level_complex.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
     {
-        Scene::Object *obj = s.new_object(t);
+        if (t->name.find("GM") == std::string::npos){
+            Scene::Object *obj = s.new_object(t);
 
-        obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+            obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
 
-        MeshBuffer::Mesh const &mesh = meshes->lookup(m);
-        obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
-        obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+            MeshBuffer::Mesh const &mesh = meshes->lookup(m);
+            obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+            obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
 
-        obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
-        obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+            obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+            obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
 
-        if (t->name == "Gun") gun_mesh_name = m;
-        if (t->name == "Harpoon") harpoon_mesh_name = m;
-        if (t->name == "Player") player_mesh_name = m;
-        if (t->name == "Rope") rope_mesh_name = m;
+            if (t->name == "Gun") gun_mesh_name = m;
+            if (t->name == "Harpoon") harpoon_mesh_name = m;
+            if (t->name == "Player") player_mesh_name = m;
+            if (t->name == "Rope") rope_mesh_name = m;
+        }
     });
 
     //look up the camera:
