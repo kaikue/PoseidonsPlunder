@@ -146,7 +146,6 @@ void GameMode::send_action(Connection *c) {
 }
 
 void GameMode::poll_server() {
-  std::cout << "poll_server" << std::endl;
   //poll server for current game state
   client.poll([&](Connection *c, Connection::Event event) {
     if (event == Connection::OnOpen) {
@@ -159,7 +158,6 @@ void GameMode::poll_server() {
     else {
       while (!(c->recv_buffer.empty())) {
         assert(event == Connection::OnRecv);
-        std::cout << "Client receive" << std::endl;
         // game begins
         if (c->recv_buffer[0] == 'b') {
           if (c->recv_buffer.size() < 1 + 2 * sizeof(int)) {
@@ -212,7 +210,7 @@ void GameMode::poll_server() {
               memcpy(&state.players[i].rotation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].rotation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
               memcpy(&state.players[i].rotation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-              std::cout << "Received (" << state.players[i].position.x << ", " << state.players[i].position.y << ", " << state.players[i].position.z << "), etc..." << std::endl;
+              std::cout << "Player " << i << ": pos (" << state.players[i].position.x << ", " << state.players[i].position.y << ", " << state.players[i].position.z << "), etc..." << std::endl;
 
               memcpy(&state.harpoons[i].state,      c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
               memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
