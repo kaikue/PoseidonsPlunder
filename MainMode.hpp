@@ -41,6 +41,8 @@ struct MainMode : public Mode {
     //starts up a 'quit/resume' pause menu:
     void show_pause_menu();
 
+    void spawn_player(uint32_t id);
+
     GameState state;
 
     struct Controls {
@@ -54,11 +56,9 @@ struct MainMode : public Mode {
 
     bool mouse_captured = false;
 
-    glm::vec3 player_up, player_right;
     uint32_t player_id;
-    Scene::Transform *player_trans = nullptr;
-    Scene::Transform *debug_trans = nullptr;
-    Scene::Transform *gun_trans = nullptr;
-    Scene::Transform *harpoon_trans = nullptr;
+    std::unordered_map<uint32_t, Scene::Transform *> players_transform;
+    std::unordered_map<uint32_t, Scene::Transform *> guns_transform;
+    std::unordered_map<uint32_t, Scene::Transform *> harpoons_transform;
     float azimuth, elevation;
 };

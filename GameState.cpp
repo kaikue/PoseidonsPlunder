@@ -16,7 +16,7 @@
 
 Load<CollisionMeshBuffer> meshes_for_collision(LoadTagDefault, []()
 {
-    return new CollisionMeshBuffer(data_path("test_level_complex_v2.collision"));
+    return new CollisionMeshBuffer(data_path("test_level_complex.collision"));
 });
 
 GameState::GameState()
@@ -34,8 +34,8 @@ GameState::GameState()
     bt_collision_world = new btCollisionWorld(bt_dispatcher, bt_broadphase, bt_collision_configuration);
 
     Scene level;
-    //load all collision meshes
-    level.load(data_path("test_level_complex_v2.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
+    //load all collision meshes and gameplay transforms
+    level.load(data_path("test_level_complex.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
     {
         std::cout << t->name << ", " << m << std::endl;
 
@@ -51,23 +51,41 @@ GameState::GameState()
         }
         else if (t->name.find("CL") != std::string::npos) {
 
-            CollisionMeshBuffer::CollisionMesh const &mesh = meshes_for_collision->lookup(m);
-
             auto *object = new btCollisionObject();
             object->setWorldTransform(
                 btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
                             btVector3(t->position.x, t->position.y, t->position.z)));
-            btStridingMeshInterface *tri_array = new btTriangleIndexVertexArray((int) mesh.triangle_count,
-                                                                                (int *) &(meshes_for_collision
-                                                                                    ->triangles[mesh.triangle_start].x),
-                                                                                (int) sizeof(glm::uvec3),
-                                                                                (int) mesh.vertex_count,
-                                                                                (btScalar *) &(meshes_for_collision
-                                                                                    ->vertices[mesh.vertex_start].x),
-                                                                                (int) sizeof(glm::vec3));
-            auto *mesh_shape = new btBvhTriangleMeshShape(tri_array, true);
-            object->setCollisionShape(mesh_shape);
+            btScaledBvhTriangleMeshShape *scaled_mesh_shape;
+
+            if (collision_meshes.find(m) == collision_meshes.end()) {
+                CollisionMeshBuffer::CollisionMesh const &mesh = meshes_for_collision->lookup(m);
+                btStridingMeshInterface *tri_array = new btTriangleIndexVertexArray((int) mesh.triangle_count,
+                                                                                    (int *) &(meshes_for_collision
+                                                                                        ->triangles[mesh.triangle_start]
+                                                                                        .x),
+                                                                                    (int) sizeof(glm::uvec3),
+                                                                                    (int) meshes_for_collision->vertices
+                                                                                        .size(),
+                                                                                    (btScalar *) &(meshes_for_collision
+                                                                                        ->vertices[0].x),
+                                                                                    (int) sizeof(glm::vec3));
+                auto *mesh_shape = new btBvhTriangleMeshShape(tri_array, true);
+                collision_meshes[m] = mesh_shape;
+
+                scaled_mesh_shape =
+                    new btScaledBvhTriangleMeshShape(mesh_shape, btVector3(t->scale.x, t->scale.y, t->scale.z));
+            }
+            else {
+                std::cout << "identical mesh found" << std::endl;
+                auto *mesh_shape = collision_meshes.at(m);
+                scaled_mesh_shape =
+                    new btScaledBvhTriangleMeshShape(mesh_shape, btVector3(t->scale.x, t->scale.y, t->scale.z));
+            }
+
+            object->setCollisionShape(scaled_mesh_shape);
+            object->setUserPointer(scaled_mesh_shape);
             bt_collision_world->addCollisionObject(object);
+
         }
         else if (t->name == "Gun") {
             gun_offset_to_player = t->make_local_to_parent();
@@ -75,7 +93,30 @@ GameState::GameState()
         else if (t->name == "Harpoon") {
             default_harpoon_offset_to_gun = t->make_local_to_parent();
         }
+        else if (t->name.find("GM") != std::string::npos) {
+            if (t->name == "GM_Spawn_Team1") {
+                team_spawns_pos[0] = t->position;
+                team_spawns_rot[0] = t->rotation;
+            }
+            if (t->name == "GM_Spawn_Team2") {
+                team_spawns_pos[1] = t->position;
+                team_spawns_rot[1] = t->rotation;
+            }
+        }
     });
+
+    for (Scene::Transform *t = level.first_transform; t != nullptr; t = t->alloc_next) {
+        if (t->name == "Treasure1") {
+            treasure_spawns[0] = t->position;
+            treasures[0].team = 0;
+            treasures[0].position = t->position;
+        }
+        if (t->name == "Treasure2") {
+            treasure_spawns[1] = t->position;
+            treasures[1].team = 1;
+            treasures[1].position = t->position;
+        }
+    }
 
     default_harpoon_to_player = gun_offset_to_player * default_harpoon_offset_to_gun;
 
@@ -88,12 +129,12 @@ GameState::GameState()
 
 }
 
-void GameState::add_player(uint32_t id)
+void GameState::add_player(uint32_t id, uint32_t team)
 {
-    glm::vec3 player_at = glm::vec3(0.0f, -14.0f, 2.0f);
+    glm::vec3 player_at = team_spawns_pos[team];
 
     glm::vec3 position = player_at;
-    glm::quat rotation = glm::quat(glm::vec3(0.0f, float(M_PI_2), 0.0f));
+    glm::quat rotation = team_spawns_rot[team];
 
     players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test"};
 
@@ -124,7 +165,8 @@ void GameState::add_player(uint32_t id)
                                      harpoon_pos_rot.second.z,
                                      harpoon_pos_rot.second.w),
                         btVector3(harpoon_pos_rot.first.x, harpoon_pos_rot.first.y, harpoon_pos_rot.first.z)));
-        auto *capsule = new btCylinderShapeZ(btVector3((btScalar)harpoon_radius, 0, (btScalar)(0.5 * harpoon_length)));
+        auto
+            *capsule = new btCylinderShapeZ(btVector3((btScalar) harpoon_radius, 0, (btScalar) (0.5 * harpoon_length)));
         harpoon_object->setCollisionShape(capsule);
 
         // set additional pointer to harpoon for identification
@@ -367,7 +409,8 @@ void GameState::update(float time)
             if (harpoons_grab_timer.at(pair.first) >= time_before_grab_retract) {
                 pair.second.state = 3;
                 harpoons_grab_timer.at(pair.first) = 0.0f;
-            } else {
+            }
+            else {
                 harpoons_grab_timer.at(pair.first) += time;
             }
         }
@@ -387,8 +430,8 @@ void GameState::update(float time)
                 pair.second.state = 0;
             }
             else {
-//                pair.second.rotation = glm::quatLookAt(harpoon_back_pos_rot.first - default_gun_tip_pos_rot.first, glm::vec3(0.0f, 1.0f, 0.0f));
-                pair.second.velocity = glm::normalize(default_gun_tip_pos_rot.first - harpoon_back_pos_rot.first) * harpoon_vel;
+                pair.second.velocity =
+                    glm::normalize(default_gun_tip_pos_rot.first - harpoon_back_pos_rot.first) * harpoon_vel;
                 pair.second.position += pair.second.velocity * time;
             }
         }

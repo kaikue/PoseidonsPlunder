@@ -21,13 +21,14 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <array>
 #include <cstddef>
 #include <random>
 #include <time.h>
 
 Load<MeshBuffer> meshes(LoadTagDefault, []()
 {
-    return new MeshBuffer(data_path("test_level_complex_v2.pnc"));
+    return new MeshBuffer(data_path("test_level_complex.pnc"));
 });
 
 Load<GLuint> meshes_for_vertex_color_program(LoadTagDefault, []()
@@ -49,6 +50,8 @@ static std::string player_mesh_name;
 
 static std::string rope_mesh_name;
 
+static std::array<Scene::Transform *, 2> treasures_transform;
+
 static Scene *current_scene = nullptr;
 
 Load<Scene> scene(LoadTagDefault, []()
@@ -65,7 +68,7 @@ Load<Scene> scene(LoadTagDefault, []()
     vertex_color_program_info->itmv_mat3 = vertex_color_program->normal_to_light_mat3;
 
     //load transform hierarchy:
-    ret->load(data_path("test_level_complex_v2.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
+    ret->load(data_path("test_level_complex.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
     {
         Scene::Object *obj = s.new_object(t);
 
@@ -102,48 +105,51 @@ Load<Scene> scene(LoadTagDefault, []()
             sun = l;
         }
     }
+
     if (!sun) throw std::runtime_error("No 'Sun' spotlight in scene.");
+
+    //look up some empty transform handles:
+    for (Scene::Transform *t = ret->first_transform; t != nullptr; t = t->alloc_next) {
+        if (t->name == "Treasure1") {
+            treasures_transform[0] = t;
+        }
+        if (t->name == "Treasure2") {
+            treasures_transform[1] = t;
+        }
+    }
 
     return ret;
 });
 
-MainMode::MainMode()
-    : state()
+void MainMode::spawn_player(uint32_t id)
 {
-    player_id = 0;
+    players_transform[id] = current_scene->new_transform();
+    players_transform.at(id)->position = state.players.at(id).position;
+    players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
-    state.add_player(player_id);
-    std::cout << glm::to_string(glm::eulerAngles(state.players.at(player_id).rotation)) << std::endl;
+    // only spawn player mesh if not its own
+    if (player_id != id) {
+        Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
 
-    player_up = glm::vec3(0.0f, 0.0f, 1.0f);
-    player_right = glm::vec3(1.0f, 0.0f, 0.0f);
+        player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
 
-    // spawn in player transform and lock in camera
-    player_trans = current_scene->new_transform();
-    player_trans->position = state.players.at(player_id).position;
-    // player transformation rotation is always 0
-    player_trans->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
+        player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+        player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
 
-    {
-        camera->transform->set_parent(player_trans);
-        camera->transform->set_transform(state.camera_offset_to_player);
-
-        // camera rotated according to game state demands
-        camera->transform->rotation *= state.players.at(player_id).rotation;
-        elevation = glm::pitch(camera->transform->rotation);
-        azimuth = glm::roll(camera->transform->rotation);
+        player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+        player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
 
-    // spawn in gun and harpoon
     {
-        gun_trans = current_scene->new_transform();
+        guns_transform[id] = current_scene->new_transform();
 
         glm::mat4 gun_to_world =
             get_transform(state.players.at(player_id).position, state.players.at(player_id).rotation)
                 * state.gun_offset_to_player;
-        gun_trans->set_transform(gun_to_world);
+        guns_transform[id]->set_transform(gun_to_world);
 
-        Scene::Object *gun_obj = current_scene->new_object(gun_trans);
+        Scene::Object *gun_obj = current_scene->new_object(guns_transform[id]);
 
         gun_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
 
@@ -156,11 +162,11 @@ MainMode::MainMode()
     }
 
     {
-        harpoon_trans = current_scene->new_transform();
-        harpoon_trans->position = state.harpoons.at(player_id).position;
-        harpoon_trans->rotation = state.harpoons.at(player_id).rotation;
+        harpoons_transform[id] = current_scene->new_transform();
+        harpoons_transform[id]->position = state.harpoons.at(player_id).position;
+        harpoons_transform[id]->rotation = state.harpoons.at(player_id).rotation;
 
-        Scene::Object *harpoon_obj = current_scene->new_object(harpoon_trans);
+        Scene::Object *harpoon_obj = current_scene->new_object(harpoons_transform[id]);
 
         harpoon_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
 
@@ -171,7 +177,32 @@ MainMode::MainMode()
         harpoon_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
         harpoon_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
+}
 
+MainMode::MainMode()
+    : state()
+{
+    player_id = 0;
+
+    state.add_player(player_id, 0);
+
+    for (auto const &elem : state.players) {
+        spawn_player(elem.first);
+    }
+
+    {
+        camera->transform->set_parent(players_transform.at(player_id));
+        camera->transform->set_transform(state.camera_offset_to_player);
+
+        // camera rotated according to game state demands
+        camera->transform->rotation *= state.players.at(player_id).rotation;
+        elevation = glm::pitch(camera->transform->rotation);
+        azimuth = glm::roll(camera->transform->rotation);
+    }
+
+    // spawn treasures on map
+    treasures_transform[0]->position = state.treasures[0].position;
+    treasures_transform[1]->position = state.treasures[1].position;
 }
 
 MainMode::~MainMode()
@@ -248,34 +279,38 @@ void MainMode::update(float elapsed)
 {
     glm::mat3 directions = camera->transform->make_local_to_world();
     float amt = 5.0f * elapsed;
-    if (controls.right) player_trans->position += amt * directions[0];
-    if (controls.left) player_trans->position -= amt * directions[0];
-    if (controls.back) player_trans->position += amt * directions[2];
-    if (controls.fwd) player_trans->position -= amt * directions[2];
+    if (controls.right) players_transform.at(player_id)->position += amt * directions[0];
+    if (controls.left) players_transform.at(player_id)->position -= amt * directions[0];
+    if (controls.back) players_transform.at(player_id)->position += amt * directions[2];
+    if (controls.fwd) players_transform.at(player_id)->position -= amt * directions[2];
     if (controls.fire) {
         state.players.at(player_id).shot_harpoon = true;
     }
 
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;
 
-    state.players.at(player_id).position = player_trans->position;
+    state.players.at(player_id).position = players_transform.at(player_id)->position;
     state.players.at(player_id).rotation =
         glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
 
-//    gun_trans->rotation = state.players.at(player_id).rotation * glm::quat(glm::vec3(0.0f, 0.0f, float(M_PI)));
     state.update(elapsed);
 
     // update gun position & rotation
-    {
-        glm::mat4 gun_to_world =
-            get_transform(state.players.at(player_id).position, state.players.at(player_id).rotation)
-                * state.gun_offset_to_player;
-        gun_trans->set_transform(gun_to_world);
+    for (auto const &pair : state.players) {
+        {
+            glm::mat4 gun_to_world =
+                get_transform(state.players.at(pair.first).position, state.players.at(pair.first).rotation)
+                    * state.gun_offset_to_player;
+            guns_transform.at(pair.first)->set_transform(gun_to_world);
+        }
+
+        players_transform.at(pair.first)->position = state.players.at(pair.first).position;
+        harpoons_transform.at(pair.first)->position = state.harpoons.at(pair.first).position;
+        harpoons_transform.at(pair.first)->rotation = state.harpoons.at(pair.first).rotation;
     }
 
-    player_trans->position = state.players.at(player_id).position;
-    harpoon_trans->position = state.harpoons.at(player_id).position;
-    harpoon_trans->rotation = state.harpoons.at(player_id).rotation;
+    treasures_transform[0]->position = state.treasures[0].position;
+    treasures_transform[1]->position = state.treasures[1].position;
 
 }
 

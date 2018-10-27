@@ -60,9 +60,9 @@ add_custom_target(SDL2CopyBinaries
 
 add_custom_target(CopyAssets
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/menu.p ${CMAKE_BINARY_DIR}/
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/test_level_complex_v2.pnc ${CMAKE_BINARY_DIR}/
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/test_level_complex_v2.scene ${CMAKE_BINARY_DIR}/
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/test_level_complex_v2.collision ${CMAKE_BINARY_DIR}/
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/test_level_complex.pnc ${CMAKE_BINARY_DIR}/
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/test_level_complex.scene ${CMAKE_BINARY_DIR}/
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/test_level_complex.collision ${CMAKE_BINARY_DIR}/
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/dist/textures ${CMAKE_BINARY_DIR}/textures
 )
 
