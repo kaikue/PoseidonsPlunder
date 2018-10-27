@@ -6,6 +6,10 @@
 #include <set>
 #include <chrono>
 
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include <glm/gtx/string_cast.hpp>
+
 //when starting game:
 void send_begin(Connection *c, GameState *state, int player_id) {
   if (c) {
@@ -35,17 +39,16 @@ void send_state(Connection *c, GameState *state, int player_id) {
       glm::vec3 pos = state->players[i].position;
       glm::vec3 vel = state->players[i].velocity;
       glm::quat rot = state->players[i].rotation;
-      std::cout << "Sending (" << pos.x << ", " << pos.y << ", " << pos.z << "), etc..." << std::endl;
       c->send(pos.x);
       c->send(pos.y);
       c->send(pos.z);
       c->send(vel.x);
       c->send(vel.y);
       c->send(vel.z);
+      c->send(rot.w);
       c->send(rot.x);
       c->send(rot.y);
       c->send(rot.z);
-      c->send(rot.w);
 
       //harpoon
       //if (state->players[i].shot_harpoon) {
@@ -112,7 +115,6 @@ int main(int argc, char **argv) {
   call_load_functions();
 
 	GameState state;
-  int player_count = 0;
 
   std::unordered_map< Connection *, int > player_ledger;
 
@@ -125,15 +127,16 @@ int main(int argc, char **argv) {
     server.poll([&](Connection *c, Connection::Event evt) {
       if (evt == Connection::OnOpen) {
         std::cout << "Connection open" << std::endl;
-        player_ledger.insert(std::make_pair(c, player_count));
-        player_count++;
+        int player_id = state.player_count;
+        player_ledger.insert(std::make_pair(c, player_id));
+        state.add_player(player_id, 0);
       }
       else if (evt == Connection::OnClose) {
         std::cout << "Connection close" << std::endl;
         //lost connection with player :(
       }
       else {
-        std::cout << "Connection receive" << std::endl;
+//        std::cout << "Connection receive" << std::endl;
         assert(evt == Connection::OnRecv);
         uint32_t player_id = player_ledger.find(c)->second; // get player ID corresponding to connection
         Player* player_data = &state.players.find(player_id)->second;
@@ -170,15 +173,15 @@ int main(int argc, char **argv) {
             memcpy(&player_data->velocity.x, c->recv_buffer.data() + 1 + 3 * sizeof(float), sizeof(float));
             memcpy(&player_data->velocity.y, c->recv_buffer.data() + 1 + 4 * sizeof(float), sizeof(float));
             memcpy(&player_data->velocity.z, c->recv_buffer.data() + 1 + 5 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.x, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.y, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.z, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.w, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.w, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.x, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.y, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
+            memcpy(&player_data->rotation.z, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
             memcpy(&player_data->shot_harpoon, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
             memcpy(&player_data->grab, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
 
             c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
-
+            std::cout << "recieving rotation: " << glm::to_string(player_data->rotation) << std::endl;
             //std::cout << "Received (" << player_data->position.x << ", " << player_data->position.y << ", " << player_data->position.z << "), etc..." << std::endl;
           }
         }
@@ -188,9 +191,9 @@ int main(int argc, char **argv) {
     //based on https://stackoverflow.com/a/14391562
     auto now = std::chrono::high_resolution_clock::now();
     float diff = std::chrono::duration_cast<std::chrono::duration<float>>(now - then).count();
-		if (diff > 0.05f) {
+		if (diff > 0.03f) {
 			then = now;
-      update_server(&state, &player_ledger, diff); //TODO put back
+      update_server(&state, &player_ledger, diff);
 		}
 	}
 }

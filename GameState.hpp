@@ -169,7 +169,7 @@ inline glm::mat4 get_transform(const glm::vec3 position, const glm::quat rotatio
 struct GameState
 {
 public:
-    int player_count = 2;
+    int player_count = 0;
     std::unordered_map<uint32_t, uint32_t> ready_to_start;
     std::unordered_map<uint32_t, Player> players;
     std::unordered_map<uint32_t, Harpoon> harpoons;

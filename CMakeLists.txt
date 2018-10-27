@@ -44,7 +44,6 @@ set(CLIENT_FILES
         depth_program.cpp
         Mode.cpp
         GameMode.cpp
-        MainMode.cpp
         MenuMode.cpp
         MeshBuffer.cpp
         draw_text.cpp

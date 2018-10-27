@@ -121,6 +121,8 @@ Load<Scene> scene(LoadTagDefault, []()
     return ret;
 });
 
+
+
 void MainMode::spawn_player(uint32_t id)
 {
     players_transform[id] = current_scene->new_transform();

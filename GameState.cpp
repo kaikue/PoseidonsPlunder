@@ -147,6 +147,7 @@ void GameState::add_treasure(uint32_t team)
 
 void GameState::add_player(uint32_t id, uint32_t team)
 {
+    player_count++;
     glm::vec3 player_at = team_spawns_pos[team];
 
     glm::vec3 position = player_at;
