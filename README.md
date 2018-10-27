@@ -25,7 +25,7 @@ Server movement validation:
 - Or just use Kai's prebuilt bullet: https://www.dropbox.com/s/9bh7d5jfm2hbtxq/bullet.zip?dl=0
 
 ## Kai's TODO
-- make server talk to client appropriately- why is client buffer always empty?
+- Add lobby state to establish # players
 - remove cout's
 - remove pos.x = 1 in GameMode::send_action
 - make everything use Translation struct and sizeof()
