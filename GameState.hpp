@@ -36,7 +36,7 @@ struct Player
     bool shot_harpoon;
     bool grab;
 
-    static int NICKNAME_LENGTH = 12;
+    static constexpr int NICKNAME_LENGTH = 12;
 
     char nickname[NICKNAME_LENGTH];
 };

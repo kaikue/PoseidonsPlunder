@@ -53,7 +53,7 @@ void send_state(Connection *c, GameState *state, int player_id) {
 
       glm::vec3 harpoon_pos = state->harpoons[i].position;
       glm::vec3 harpoon_vel = state->harpoons[i].velocity;
-      glm::quat harpoon_rot = state->harpoons[i].rotation; //TODO
+//      glm::quat harpoon_rot = state->harpoons[i].rotation; //TODO
       c->send(harpoon_pos.x);
       c->send(harpoon_pos.y);
       c->send(harpoon_pos.z);
@@ -149,8 +149,8 @@ int main(int argc, char **argv) {
           else {
             std::cout << "Nickname/team update" << std::endl;
             memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
-            memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * state.NICKNAME_LENGTH);
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * state.NICKNAME_LENGTH);
+            memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * Player::NICKNAME_LENGTH);
+            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
           }
         }
         else if (c->recv_buffer[0] == 'p') {
