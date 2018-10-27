@@ -1,5 +1,6 @@
 #include "Connection.hpp"
 #include "GameState.hpp"
+#include "Load.hpp"
 
 #include <iostream>
 #include <set>
@@ -107,6 +108,8 @@ int main(int argc, char **argv) {
 	}
 	
 	Server server(argv[1]);
+
+  call_load_functions();
 
 	GameState state;
   int player_count = 0;
