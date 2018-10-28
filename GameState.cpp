@@ -327,9 +327,9 @@ void GameState::update(float time)
 
             btVector3 from(cam_pos_rot.first.x, cam_pos_rot.first.y, cam_pos_rot.first.z);
             btVector3 direction(current_dir.x, current_dir.y, current_dir.z);
-            btCollisionWorld::ClosestRayResultCallback closestResults(from, from + direction * player_reach);
+            btCollisionWorld::ClosestRayResultCallback closestResults(from, from + direction * (btScalar)player_reach);
             closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
-            bt_collision_world->rayTest(from, from + direction * player_reach, closestResults);
+            bt_collision_world->rayTest(from, from + direction * (btScalar)player_reach, closestResults);
 
             for (uint32_t team = 0; team < num_teams; team++) {
                 if (closestResults.m_collisionObject == treasure_collisions[team]) {
