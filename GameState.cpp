@@ -310,25 +310,24 @@ void GameState::update(float time)
         }
 
         if (pair.second.grab) {
-            static const double player_reach = 5.0;
+            // determines how close the player has to be to be able to grab the treasure
+            static const double player_reach = 1.5;
 
-            btVector3 from(pair.second.position.x, pair.second.position.y, pair.second.position.z);
+            glm::mat4 cam_to_world =
+                get_transform(pair.second.position, pair.second.rotation) * camera_offset_to_player;
+            auto cam_pos_rot = get_pos_rot(cam_to_world);
+
+            btVector3 from(cam_pos_rot.first.x, cam_pos_rot.first.y, cam_pos_rot.first.z);
             btVector3 direction(current_dir.x, current_dir.y, current_dir.z);
-            btCollisionWorld::AllHitsRayResultCallback allResults(from, from + direction * player_reach);
-//            closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
-            bt_collision_world->rayTest(from, from + direction * player_reach, allResults);
+            btCollisionWorld::ClosestRayResultCallback closestResults(from, from + direction * player_reach);
+            closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
+            bt_collision_world->rayTest(from, from + direction * player_reach, closestResults);
 
-            for (int i = 0; i < allResults.m_hitFractions.size(); i++)
-            {
-                std::cout << "hit point" << allResults.m_hitPointWorld[i].x() << ", " << allResults.m_hitPointWorld[i].y() << ", " << allResults.m_hitPointWorld[i].z() << ", user pointer" << allResults.m_collisionObjects[i]->getUserPointer() << std::endl;
-
-                for (uint32_t team = 0; team < num_teams; team++) {
-
-                    if (allResults.m_collisionObjects[i]->getUserPointer() == &treasures[team]) {
-                        std::cout << "treasure " << team << " is hit, fraction: " << allResults.m_hitFractions[i] << std::endl;
-                    }
+            for (uint32_t team = 0; team < num_teams; team++) {
+                if (closestResults.m_collisionObject == treasure_collisions[team]) {
+                    std::cout << "treasure " << team << " is hit, fraction: " << closestResults.m_closestHitFraction
+                              << std::endl;
                 }
-
             }
 
             pair.second.grab = false;
