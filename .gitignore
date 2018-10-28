@@ -15,3 +15,8 @@ kit-libs-linux
 .idea
 bullet
 cmake-build-debug
+/.vs
+/*.vcxproj
+/*.filters
+/*.user
+/*.sln
