@@ -406,10 +406,10 @@ void GameMode::poll_server() {
                         }
                         // update treasure pos and state
                         for (int j = 0; j < 2; j++) {
-                            memcpy(&state.treasures[j].position.x, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 0) * sizeof(float) + j * sizeof(int), sizeof(float));
-                            memcpy(&state.treasures[j].position.y, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 1) * sizeof(float) + j * sizeof(int), sizeof(float));
-                            memcpy(&state.treasures[j].position.z, c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 2) * sizeof(float) + j * sizeof(int), sizeof(float));
-                            memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + (1 + state.player_count) * sizeof(bool) + (state.player_count * 16 + j * 3 + 3) * sizeof(float) + j * sizeof(int), sizeof(int));
+                            memcpy(&state.treasures[j].position.x, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 0) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
+                            memcpy(&state.treasures[j].position.y, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 1) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
+                            memcpy(&state.treasures[j].position.z, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 2) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
+                            memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 3) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(int));
                         }
 
                         //1 for 's' char
@@ -441,7 +441,6 @@ void GameMode::update(float elapsed) {
 
     // send player action and position to server
     if (client.connection) {
-        std::cout << "firing: " << controls.fire << std::endl;
         send_action(&client.connection);
     }
     controls.fire = false;

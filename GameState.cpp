@@ -7,6 +7,8 @@
 
 #include <glm/gtx/string_cast.hpp>
 
+#include <BulletCollision/NarrowPhaseCollision/btRaycastCallback.h>
+
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -127,6 +129,9 @@ GameState::GameState()
         }
     }
 
+    // spawning treasures
+    add_treasure(0);
+    add_treasure(1);
 }
 
 void GameState::add_treasure(uint32_t team)
@@ -139,10 +144,11 @@ void GameState::add_treasure(uint32_t team)
         auto *box = new btBoxShape(treasure_dims * 0.5f);
         treasure_object->setCollisionShape(box);
 
-        treasure_object->setUserIndex(team);
         treasure_object->setUserPointer((void *) &treasures[team]);
         bt_collision_world->addCollisionObject(treasure_object);
     }
+
+    treasure_collisions[team] = treasure_object;
 }
 
 void GameState::add_player(uint32_t id, uint32_t team)
@@ -153,7 +159,8 @@ void GameState::add_player(uint32_t id, uint32_t team)
     glm::vec3 position = player_at;
     glm::quat rotation = team_spawns_rot[team];
 
-    players[id] = {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test\0\0\0\0\0\0\0"};
+    players[id] =
+        {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, "test\0\0\0\0\0\0\0"};
 
     // add player collision mesh
     auto *player_object = new btCollisionObject();
@@ -294,15 +301,43 @@ void GameState::update(float time)
 
     // handling harpoon firing event
     for (auto &pair : players) {
+        glm::vec3 current_dir = glm::normalize(glm::toMat3(pair.second.rotation)[1]);
+
         if (pair.second.shot_harpoon) {
             harpoons.at(pair.first).state = 1;
-            harpoons.at(pair.first).velocity = glm::normalize(glm::toMat3(pair.second.rotation)[1]) * harpoon_vel;
+            harpoons.at(pair.first).velocity = current_dir * harpoon_vel;
             pair.second.shot_harpoon = false;
         }
 
         if (pair.second.grab) {
+            static const double player_reach = 5.0;
+
+            btVector3 from(pair.second.position.x, pair.second.position.y, pair.second.position.z);
+            btVector3 direction(current_dir.x, current_dir.y, current_dir.z);
+            btCollisionWorld::AllHitsRayResultCallback allResults(from, from + direction * player_reach);
+//            closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
+            bt_collision_world->rayTest(from, from + direction * player_reach, allResults);
+
+            for (int i = 0; i < allResults.m_hitFractions.size(); i++)
+            {
+                std::cout << "hit point" << allResults.m_hitPointWorld[i].x() << ", " << allResults.m_hitPointWorld[i].y() << ", " << allResults.m_hitPointWorld[i].z() << ", user pointer" << allResults.m_collisionObjects[i]->getUserPointer() << std::endl;
+
+                for (uint32_t team = 0; team < num_teams; team++) {
+
+                    if (allResults.m_collisionObjects[i]->getUserPointer() == &treasures[team]) {
+                        std::cout << "treasure " << team << " is hit, fraction: " << allResults.m_hitFractions[i] << std::endl;
+                    }
+                }
+
+            }
+
             pair.second.grab = false;
         }
+    }
+
+    // handle treasure updates
+    for (uint32_t team = 0; team < num_teams; team++) {
+
     }
 
     for (auto const &pair : player_collisions) {

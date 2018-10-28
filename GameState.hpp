@@ -169,11 +169,14 @@ inline glm::mat4 get_transform(const glm::vec3 position, const glm::quat rotatio
 struct GameState
 {
 public:
+    static constexpr uint32_t num_teams = 2;
+
     int player_count = 0;
     std::unordered_map<uint32_t, uint32_t> ready_to_start;
     std::unordered_map<uint32_t, Player> players;
     std::unordered_map<uint32_t, Harpoon> harpoons;
-    Treasure treasures[2];
+    Treasure treasures[num_teams];
+    uint32_t current_points[num_teams] = {0, 0};
 
     glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player;
 
@@ -190,13 +193,15 @@ public:
 
 private:
     // private game state members
-    std::unordered_map<uint32_t, float> harpoons_grab_timer;
     static constexpr float dist_before_retract = 20.0f;
     static constexpr float time_before_grab_retract = 1.0f;
     static constexpr float harpoon_vel = 6.0f;
-    glm::vec3 team_spawns_pos[2];
-    glm::quat team_spawns_rot[2];
-    glm::vec3 treasure_spawns[2];
+    static constexpr uint32_t max_points = 3;
+
+    std::unordered_map<uint32_t, float> harpoons_grab_timer;
+    glm::vec3 team_spawns_pos[num_teams];
+    glm::quat team_spawns_rot[num_teams];
+    glm::vec3 treasure_spawns[num_teams];
     btVector3 treasure_dims = {0.5f, 0.5f, 0.5f};
 
     // bullet related members
@@ -213,6 +218,7 @@ private:
 
     std::unordered_map<std::string, btBvhTriangleMeshShape *> collision_meshes;
     std::unordered_map<uint32_t, std::pair<btCollisionObject *, btCollisionObject *>> player_collisions;
+    btCollisionObject *treasure_collisions[2];
 
     enum class HarpoonCollision
     {

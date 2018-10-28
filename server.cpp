@@ -99,7 +99,6 @@ void update_server(GameState *state, std::unordered_map< Connection *, int > *pl
   //send state to all clients
   //for (std::pair<Connection *, int> p : player_ledger) {
   for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
-    std::cout << "Sending to player " << iter->second << std::endl;
     send_state(iter->first, state, iter->second);
   }
 }
@@ -181,7 +180,6 @@ int main(int argc, char **argv) {
             memcpy(&player_data->grab, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
 
             c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
-            std::cout << "recieving rotation: " << glm::to_string(player_data->rotation) << std::endl;
             //std::cout << "Received (" << player_data->position.x << ", " << player_data->position.y << ", " << player_data->position.z << "), etc..." << std::endl;
           }
         }
