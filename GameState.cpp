@@ -201,6 +201,7 @@ void GameState::add_player(uint32_t id, uint32_t team)
 
     player_collisions[id] = {player_object, harpoon_object};
     harpoons_grab_timer[id] = 0.0f;
+    player_shot_timer[id] = 0.0f;
 }
 
 void GameState::handle_harpoon_collision(const btCollisionObject *harpoon_obj,
@@ -298,20 +299,27 @@ void GameState::handle_player_collision(const btCollisionObject *player_obj,
 
 void GameState::update(float time)
 {
+    // handle game victory condition update
+    for (uint32_t team = 0; team < num_teams; team++) {
+        if (current_points[team] >= max_points) {
+            // TODO: implement proper victory and end game mode
+            std::cout << "team " << team << " wins!" << std::endl;
+        }
+    }
 
-    // handling harpoon firing event
+    // handling player control and status updates
     for (auto &pair : players) {
         glm::vec3 current_dir = glm::normalize(glm::toMat3(pair.second.rotation)[1]);
 
-        if (pair.second.shot_harpoon) {
+        // player cannot shoot harpoon if they have treasure or if shot
+        if (pair.second.shot_harpoon && !pair.second.has_treasure_1 && !pair.second.has_treasure_2
+            && !pair.second.is_shot) {
             harpoons.at(pair.first).state = 1;
             harpoons.at(pair.first).velocity = current_dir * harpoon_vel;
             pair.second.shot_harpoon = false;
         }
 
         if (pair.second.grab) {
-            // determines how close the player has to be to be able to grab the treasure
-            static const double player_reach = 1.5;
 
             glm::mat4 cam_to_world =
                 get_transform(pair.second.position, pair.second.rotation) * camera_offset_to_player;
@@ -325,18 +333,70 @@ void GameState::update(float time)
 
             for (uint32_t team = 0; team < num_teams; team++) {
                 if (closestResults.m_collisionObject == treasure_collisions[team]) {
-                    std::cout << "treasure " << team << " is hit, fraction: " << closestResults.m_closestHitFraction
-                              << std::endl;
+
+                    // TODO: determine if we want treasure to be grabbable if grabbed by another player already
+                    treasures[team].held_by = pair.first;
+
+                    if (team == 0) {
+                        pair.second.has_treasure_1 = true;
+                    }
+                    else if (team == 1) {
+                        pair.second.has_treasure_2 = true;
+                    }
                 }
             }
 
             pair.second.grab = false;
+        }
+
+        // player will drop treasure if shot
+        if (pair.second.is_shot) {
+            pair.second.has_treasure_1 = false;
+            pair.second.has_treasure_2 = false;
+            for (uint32_t team = 0; team < num_teams; team++) {
+                if (treasures[team].held_by == pair.first) {
+                    treasures[team].held_by = -1;
+                }
+            }
         }
     }
 
     // handle treasure updates
     for (uint32_t team = 0; team < num_teams; team++) {
 
+        if (treasures[team].held_by != -1) {
+            treasure_timeout[team] = 0.0f;
+            treasures[team].position = players.at(static_cast<uint32_t>(treasures[team].held_by)).position;
+
+        }
+        else if (glm::distance(treasures[team].position, treasure_spawns[team]) > treasure_spawn_radius) {
+            // treasure is outside its own spawn and dropped, after a while it will return to spawn
+            treasure_timeout[team] += time;
+            // TODO: bonus treasure physics making it fall to the sea floor if we wish
+
+            if (treasure_timeout[team] > time_before_treasure_return) {
+                treasures[team].position = treasure_spawns[team];
+                treasure_timeout[team] = 0.0f;
+            }
+        }
+
+        // if treasure is in opposite team's treasure spawn, they score, and the treasure is respawned
+        if (glm::distance(treasures[team].position, treasure_spawns[num_teams - 1 - team]) < treasure_spawn_radius) {
+            current_points[num_teams - 1 - team]++;
+            std::cout << "team " << num_teams - 1 - team << " scored, their score is now: "
+                      << current_points[num_teams - 1 - team] << std::endl;
+            if (treasures[team].held_by != -1) {
+                if (team == 0) {
+                    players.at(static_cast<uint32_t>(treasures[team].held_by)).has_treasure_1 = false;
+                }
+                else if (team == 1) {
+                    players.at(static_cast<uint32_t>(treasures[team].held_by)).has_treasure_2 = false;
+                }
+            }
+
+            treasures[team].held_by = -1;
+            treasures[team].position = treasure_spawns[team];
+        }
     }
 
     for (auto const &pair : player_collisions) {
