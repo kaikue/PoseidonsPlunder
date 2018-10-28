@@ -432,11 +432,21 @@ void GameMode::poll_server() {
 void GameMode::update(float elapsed) {
 
     glm::mat3 directions = camera->transform->make_local_to_world();
-    float amt = 5.0f * elapsed;
-    if (controls.right) players_transform.at(player_id)->position += amt * directions[0];
-    if (controls.left) players_transform.at(player_id)->position -= amt * directions[0];
-    if (controls.back) players_transform.at(player_id)->position += amt * directions[2];
-    if (controls.fwd) players_transform.at(player_id)->position -= amt * directions[2];
+
+    // only process movement controls if player is not paralyzed
+    if (!get_own_player().is_shot) {
+        float amt;
+        if (state.treasures[0].held_by == player_id || state.treasures[1].held_by == player_id) {
+            amt = GameState::slowed_player_speed * elapsed;
+        } else {
+            amt = GameState::default_player_speed * elapsed;
+        }
+
+        if (controls.right) players_transform.at(player_id)->position += amt * directions[0];
+        if (controls.left) players_transform.at(player_id)->position -= amt * directions[0];
+        if (controls.back) players_transform.at(player_id)->position += amt * directions[2];
+        if (controls.fwd) players_transform.at(player_id)->position -= amt * directions[2];
+    }
 
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;
 

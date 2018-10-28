@@ -178,6 +178,8 @@ public:
     Treasure treasures[num_teams];
     uint32_t current_points[num_teams] = {0, 0};
 
+    static constexpr float default_player_speed = 6.0f;
+    static constexpr float slowed_player_speed = 4.0f;
     glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player;
 
     GameState();
@@ -197,12 +199,19 @@ private:
     static constexpr float time_before_grab_retract = 1.0f;
     static constexpr float harpoon_vel = 6.0f;
     static constexpr uint32_t max_points = 3;
+    static constexpr float treasure_spawn_radius = 2.0f;
+    static constexpr float time_before_treasure_return = 10.0f;
+
+    // determines how close the player has to be to be able to grab the treasure
+    static constexpr double player_reach = 1.5;
 
     std::unordered_map<uint32_t, float> harpoons_grab_timer;
+    std::unordered_map<uint32_t, float> player_shot_timer;
     glm::vec3 team_spawns_pos[num_teams];
     glm::quat team_spawns_rot[num_teams];
     glm::vec3 treasure_spawns[num_teams];
     btVector3 treasure_dims = {0.5f, 0.5f, 0.5f};
+    float treasure_timeout[num_teams] = {0.0f, 0.0f};
 
     // bullet related members
     static constexpr double scene_size = 500;
