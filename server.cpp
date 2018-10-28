@@ -176,8 +176,17 @@ int main(int argc, char **argv) {
             memcpy(&player_data->rotation.x, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
             memcpy(&player_data->rotation.y, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
             memcpy(&player_data->rotation.z, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
-            memcpy(&player_data->shot_harpoon, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
-            memcpy(&player_data->grab, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
+
+			bool shot = false;
+			bool grabbed = false;
+            memcpy(&shot, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
+            memcpy(&grabbed, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
+			if (shot) {
+				player_data->shot_harpoon = true;
+			}
+			if (grabbed) {
+				player_data->grab = true;
+			}
 
             c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
             //std::cout << "Received (" << player_data->position.x << ", " << player_data->position.y << ", " << player_data->position.z << "), etc..." << std::endl;
