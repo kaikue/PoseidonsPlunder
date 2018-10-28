@@ -190,7 +190,7 @@ GameMode::GameMode(Client &client_) : client(client_) {
     player_id = 0;
     state.player_count = 1;
 
-    for (uint32_t i = 0; i < state.player_count; i++) {
+    for (int i = 0; i < state.player_count; i++) {
         spawn_player(i);
     }
 
@@ -372,14 +372,19 @@ void GameMode::poll_server() {
                 else {
 //                    std::cout << "Receiving info..." << std::endl;
                     assert(c->recv_buffer[0] == 's');
-                    if (c->recv_buffer.size() < 1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) {
+					size_t packet_len = 1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int);
+                    if (c->recv_buffer.size() < packet_len) {
 //                        std::cout << "Num players " << state.player_count << std::endl;
 //                        std::cout << "Buffer size " << c->recv_buffer.size() << ", should be " << (1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) << std::endl;
                         return; //wait for more data
                     }
                     else {
 //                        std::cout << "Copying state" << std::endl;
-                        //TODO: if buffer length is more than twice the length of a full update, skip all but the last one
+                        //if buffer length is more than twice the length of a full update, skip all but the last one
+						while (c->recv_buffer.size() >= 2 * packet_len) {
+							c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
+						}
+
                         memcpy(&get_own_player().is_shot, c->recv_buffer.data() + 1, sizeof(bool));
                         // update the players and the harpoons
                         for (int i = 0; i < state.player_count; i++) {
@@ -416,7 +421,7 @@ void GameMode::poll_server() {
                         //1 bool for is_shot
                         //player_count * 16 floats for pos(3), vel(3), rot(4), harpoon pos(3), and harpoon vel(3), plus 6 for two treasure pos(3)
                         //player_count ints for harpoon states, plus 2 for two treasure held_by
-                        c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int));
+                        c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
                     }
                 }
             }

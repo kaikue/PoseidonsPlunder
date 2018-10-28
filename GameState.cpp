@@ -314,9 +314,9 @@ void GameState::update(float time)
 
             btVector3 from(pair.second.position.x, pair.second.position.y, pair.second.position.z);
             btVector3 direction(current_dir.x, current_dir.y, current_dir.z);
-            btCollisionWorld::AllHitsRayResultCallback allResults(from, from + direction * player_reach);
+            btCollisionWorld::AllHitsRayResultCallback allResults(from, from + direction * (btScalar)player_reach);
 //            closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
-            bt_collision_world->rayTest(from, from + direction * player_reach, allResults);
+            bt_collision_world->rayTest(from, from + direction * (btScalar)player_reach, allResults);
 
             for (int i = 0; i < allResults.m_hitFractions.size(); i++)
             {
