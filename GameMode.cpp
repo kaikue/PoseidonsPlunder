@@ -372,7 +372,7 @@ void GameMode::poll_server() {
                 else {
 //                    std::cout << "Receiving info..." << std::endl;
                     assert(c->recv_buffer[0] == 's');
-					size_t packet_len = 1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int);
+					size_t packet_len = 1 + 1 * sizeof(bool) + (state.player_count * 20 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int);
                     if (c->recv_buffer.size() < packet_len) {
 //                        std::cout << "Num players " << state.player_count << std::endl;
 //                        std::cout << "Buffer size " << c->recv_buffer.size() << ", should be " << (1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) << std::endl;
@@ -389,37 +389,41 @@ void GameMode::poll_server() {
                         // update the players and the harpoons
                         for (int i = 0; i < state.player_count; i++) {
                             //TODO: don't update position if it's self and close enough?
-                            memcpy(&state.players[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].position.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 1) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].position.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 2) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].velocity.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].velocity.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 4) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].velocity.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 5) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].rotation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].rotation.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].rotation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
-                            memcpy(&state.players[i].rotation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].position.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 1) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].position.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 2) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].velocity.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].velocity.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 4) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].velocity.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 5) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].rotation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].rotation.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 7) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].rotation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 8) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
+                            memcpy(&state.players[i].rotation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 9) * sizeof(float) + (i + 0) * sizeof(int), sizeof(float));
 //                            std::cout << "Player " << i << ": pos (" << state.players[i].position.x << ", " << state.players[i].position.y << ", " << state.players[i].position.z << "), etc..." << std::endl;
 
-                            memcpy(&state.harpoons[i].state,      c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
-                            memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
-                            memcpy(&state.harpoons[i].position.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 11) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
-                            memcpy(&state.harpoons[i].position.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 12) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
-                            memcpy(&state.harpoons[i].velocity.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 13) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
-                            memcpy(&state.harpoons[i].velocity.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 14) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
-                            memcpy(&state.harpoons[i].velocity.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 16 + 15) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].state,      c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
+                            memcpy(&state.harpoons[i].position.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].position.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 11) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].position.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 12) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].velocity.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 13) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].velocity.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 14) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].velocity.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 15) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].rotation.w, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 16) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].rotation.x, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 17) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].rotation.y, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 18) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
+                            memcpy(&state.harpoons[i].rotation.z, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 19) * sizeof(float) + (i + 1) * sizeof(int), sizeof(float));
                         }
                         // update treasure pos and state
                         for (int j = 0; j < 2; j++) {
-                            memcpy(&state.treasures[j].position.x, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 0) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
-                            memcpy(&state.treasures[j].position.y, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 1) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
-                            memcpy(&state.treasures[j].position.z, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 2) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
-                            memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 16 + j * 3 + 3) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(int));
+                            memcpy(&state.treasures[j].position.x, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 20 + j * 3 + 0) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
+                            memcpy(&state.treasures[j].position.y, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 20 + j * 3 + 1) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
+                            memcpy(&state.treasures[j].position.z, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 20 + j * 3 + 2) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(float));
+                            memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 20 + j * 3 + 3) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(int));
                         }
 
                         //1 for 's' char
                         //1 bool for is_shot
-                        //player_count * 16 floats for pos(3), vel(3), rot(4), harpoon pos(3), and harpoon vel(3), plus 6 for two treasure pos(3)
+                        //player_count * 20 floats for pos(3), vel(3), rot(4), harpoon pos(3), harpoon vel(3), harpoon rotation(4), plus 6 for two treasure pos(3)
                         //player_count ints for harpoon states, plus 2 for two treasure held_by
                         c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
                     }
