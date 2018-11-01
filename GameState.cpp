@@ -46,7 +46,7 @@ GameState::GameState()
             object->setWorldTransform(
                 btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
                             btVector3(t->position.x, t->position.y, t->position.z)));
-            auto *capsule = new btCapsuleShapeZ(player_capsule_radius, player_capsule_height);
+            auto *capsule = new btCapsuleShapeZ((btScalar)player_capsule_radius, (btScalar)player_capsule_height);
             object->setCollisionShape(capsule);
             bt_collision_world->addCollisionObject(object);
 
@@ -168,7 +168,7 @@ void GameState::add_player(uint32_t id, uint32_t team)
         player_object->setWorldTransform(
             btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                         btVector3(position.x, position.y, position.z)));
-        auto *capsule = new btCapsuleShapeZ(player_capsule_radius, player_capsule_height);
+        auto *capsule = new btCapsuleShapeZ((btScalar)player_capsule_radius, (btScalar)player_capsule_height);
         player_object->setCollisionShape(capsule);
 
         player_object->setUserIndex(id);
@@ -437,14 +437,14 @@ void GameState::update(float time)
 
         if(treasure_0_is_dropping ){
           std::cout << "treasure 0 is dropping " << std::endl;
-          treasures[0].position[2] -= 0.01;
+          treasures[0].position[2] -= 0.01f;
           if(treasures[0].position[2] < 0.0){
             treasure_0_is_dropping = false;
           }
         }
         if(treasure_1_is_dropping){
           std::cout << "treasure 1 is dropping " << std::endl;
-          treasures[1].position[2] -= 0.01;
+          treasures[1].position[2] -= 0.01f;
           if(treasures[1].position[2] < 0.0){
             treasure_1_is_dropping = false;
           }

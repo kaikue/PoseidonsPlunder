@@ -121,7 +121,6 @@ Load<Scene> scene(LoadTagDefault, []()
 
 Player &GameMode::get_own_player()
 {
-	std::cout << "Get own player" << std::endl;
     return state.players.at(player_id);
 }
 
