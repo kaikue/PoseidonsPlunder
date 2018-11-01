@@ -212,11 +212,13 @@ private:
     glm::vec3 treasure_spawns[num_teams];
     btVector3 treasure_dims = {0.5f, 0.5f, 0.5f};
     float treasure_timeout[num_teams] = {0.0f, 0.0f};
-
+    float test_treasure_drop_time = 5.0f;
     // bullet related members
     static constexpr double scene_size = 500;
     static constexpr unsigned int max_objects = 16000;
     static constexpr double player_sphere_radius = 0.9;
+    static constexpr double player_capsule_radius = 0.25;
+    static constexpr double player_capsule_height = 0.9;
     static constexpr double harpoon_length = 0.5;
     static constexpr double harpoon_radius = 0.01;
 
@@ -248,4 +250,11 @@ private:
                                  const GameState::PlayerCollision type,
                                  const btPersistentManifold *manifold,
                                  bool A_is_player);
+    void treasure_drop_collision(const btCollisionObject *treasure_obj,
+                                 const btCollisionObject *other_obj,
+                                 const btPersistentManifold *manifold,
+                                 bool treasure_is_0,
+                                 bool A_is_treasure);
+    bool treasure_0_is_dropping = false;
+    bool treasure_1_is_dropping = false;
 };

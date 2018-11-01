@@ -46,8 +46,8 @@ GameState::GameState()
             object->setWorldTransform(
                 btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
                             btVector3(t->position.x, t->position.y, t->position.z)));
-            auto *sphere = new btSphereShape((btScalar) player_sphere_radius);
-            object->setCollisionShape(sphere);
+            auto *capsule = new btCapsuleShapeZ(player_capsule_radius, player_capsule_height);
+            object->setCollisionShape(capsule);
             bt_collision_world->addCollisionObject(object);
 
         }
@@ -143,7 +143,7 @@ void GameState::add_treasure(uint32_t team)
                         btVector3(treasures[team].position.x, treasures[team].position.y, treasures[team].position.z)));
         auto *box = new btBoxShape(treasure_dims * 0.5f);
         treasure_object->setCollisionShape(box);
-
+        // treasure_object->setUserIndex(100+team);
         treasure_object->setUserPointer((void *) &treasures[team]);
         bt_collision_world->addCollisionObject(treasure_object);
     }
@@ -168,8 +168,8 @@ void GameState::add_player(uint32_t id, uint32_t team)
         player_object->setWorldTransform(
             btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                         btVector3(position.x, position.y, position.z)));
-        auto *sphere = new btSphereShape((btScalar) player_sphere_radius);
-        player_object->setCollisionShape(sphere);
+        auto *capsule = new btCapsuleShapeZ(player_capsule_radius, player_capsule_height);
+        player_object->setCollisionShape(capsule);
 
         player_object->setUserIndex(id);
         player_object->setUserPointer((void *) &players.at(id));
@@ -296,6 +296,42 @@ void GameState::handle_player_collision(const btCollisionObject *player_obj,
         }
     }
 }
+void GameState::treasure_drop_collision(const btCollisionObject *treasure_obj,
+                                        const btCollisionObject *other_obj,
+                                        const btPersistentManifold *manifold,
+                                        bool treasure_is_0,
+                                        bool A_is_treasure)
+{
+    int numContacts = manifold->getNumContacts();
+    // numContacts--;
+    //For each contact point in that manifold
+    for (int j = 0; j < numContacts; j++) {
+        //Get the contact information
+        const btManifoldPoint &pt = manifold->getContactPoint(j);
+        btVector3 ptA = pt.getPositionWorldOnA();
+        btVector3 ptB = pt.getPositionWorldOnB();
+        double ptdist = pt.getDistance();
+        btVector3 rebound_vec;
+
+        if (ptdist < 0) {
+            if (A_is_treasure) {
+                rebound_vec = (ptA - ptB) * (btScalar) ((ptdist > 0) - (ptdist < 0));
+            }
+            else {
+                rebound_vec = (ptB - ptA) * (btScalar) ((ptdist > 0) - (ptdist < 0));
+            }
+            ((Treasure *) treasure_obj->getUserPointer())->position +=
+                glm::vec3(rebound_vec.x(), rebound_vec.y(), rebound_vec.z());
+
+        }
+    }
+    // if(treasure_is_0){
+    //   treasure_0_is_dropping = false;
+    // }
+    // else{
+    //   treasure_1_is_dropping = false;
+    // }
+}
 
 void GameState::update(float time)
 {
@@ -350,12 +386,30 @@ void GameState::update(float time)
         }
 
         // player will drop treasure if shot
-        if (pair.second.is_shot) {
+        // TODO: treasure dynamics
+        // testing the dropping of treasure
+        if(test_treasure_drop_time > 0.0f && (treasures[0].held_by != -1 || treasures[1].held_by != -1 )){
+          test_treasure_drop_time -= time;
+        }
+        // if(test_treasure_drop_time < 0.0f){
+        //
+        //   treasure_0_is_dropping = true;
+        //   treasure_1_is_dropping = true;
+        //
+        // }
+        if (pair.second.is_shot || test_treasure_drop_time < 0.0f) {
+            test_treasure_drop_time = 5.0f;
             pair.second.has_treasure_1 = false;
             pair.second.has_treasure_2 = false;
             for (uint32_t team = 0; team < num_teams; team++) {
                 if (treasures[team].held_by == pair.first) {
                     treasures[team].held_by = -1;
+                    if(team == 0){
+                      treasure_0_is_dropping = true;
+                    }
+                    if(team == 1){
+                      treasure_1_is_dropping = true;
+                    }
                 }
             }
         }
@@ -378,6 +432,21 @@ void GameState::update(float time)
                 treasures[team].position = treasure_spawns[team];
                 treasure_timeout[team] = 0.0f;
             }
+        }
+
+        if(treasure_0_is_dropping){
+          std::cout << "treasure 0 is dropping " << std::endl;
+          treasures[0].position[2] -= 0.01;
+          if(treasures[0].position[2] < 0.0 ){
+            treasure_0_is_dropping = false;
+          }
+        }
+        if(treasure_1_is_dropping){
+          std::cout << "treasure 1 is dropping " << std::endl;
+          treasures[1].position[2] -= 0.01;
+          if(treasures[1].position[2] < 0.0 ){
+            treasure_1_is_dropping = false;
+          }
         }
 
         // if treasure is in opposite team's treasure spawn, they score, and the treasure is respawned
@@ -433,6 +502,10 @@ void GameState::update(float time)
         bool B_is_player = false;
         bool A_is_harpoon = false;
         bool B_is_harpoon = false;
+        // bool A_is_treasure = false;
+        // bool B_is_treasure = false;
+        // bool treasure_is_0 = false;
+        // bool A_B_is_player = false;
 
         if (players.find(obA->getUserIndex()) != players.end()) {
             if (obA->getUserPointer() == &harpoons.at(obA->getUserIndex())) {
@@ -450,6 +523,16 @@ void GameState::update(float time)
                 B_is_player = true;
             }
         }
+        // if(obA->getUserIndex() == 100 || obA->getUserIndex() == 101){
+        //   // std::cout << "is treasure A" << std::endl;
+        //   A_is_treasure = true;
+        //
+        // }
+        // if(obB->getUserIndex() == 100 || obB->getUserIndex() == 101){
+        //   // std::cout << "is treasure B" << std::endl;
+        //   B_is_treasure = true;
+        //
+        // }
 
         if (A_is_harpoon || B_is_harpoon) {
             if (A_is_harpoon) {
@@ -493,6 +576,39 @@ void GameState::update(float time)
                 }
             }
         }
+
+        // else if (A_is_treasure || B_is_treasure){
+        //   if(players.find(obA->getUserIndex()) != players.end() || players.find(obB->getUserIndex()) != players.end()){
+        //     std::cout << "here0" << std::endl;
+        //     A_B_is_player = true;
+        //     // continue;
+        //   }
+        //   if(obA->getUserIndex() == 100 && treasure_0_is_dropping && A_is_treasure && !A_B_is_player){
+        //     std::cout << "here1" << std::endl;
+        //     treasure_is_0 = true;
+        //     // treasure_0_is_dropping = false;
+        //     // treasure_drop_collision(obA, obB, contactManifold, treasure_is_0, A_is_treasure);
+        //   }
+        //   else if(obA->getUserIndex() == 101 && treasure_1_is_dropping && A_is_treasure && !A_B_is_player){
+        //     std::cout << "here2" << std::endl;
+        //     treasure_is_0 = false;
+        //     // treasure_1_is_dropping = false;
+        //     // treasure_drop_collision(obA, obB, contactManifold, treasure_is_0, A_is_treasure);
+        //   }
+        //   else if(obB->getUserIndex() == 100 && treasure_0_is_dropping && B_is_treasure && !A_B_is_player){
+        //     std::cout << "here3" << std::endl;
+        //     treasure_is_0 = true;
+        //     // treasure_0_is_dropping = false;
+        //     // treasure_drop_collision(obB, obA, contactManifold, treasure_is_0, A_is_treasure);
+        //   }
+        //   else if(obB->getUserIndex() == 101 && treasure_1_is_dropping && B_is_treasure && !A_B_is_player){
+        //     std::cout << "here4" << std::endl;
+        //     treasure_is_0 = false;
+        //     // treasure_1_is_dropping = false;
+        //     // treasure_drop_collision(obB, obA, contactManifold, treasure_is_0, A_is_treasure);
+        //   }
+        //
+        // }
     }
 
     // handle harpoon position update
