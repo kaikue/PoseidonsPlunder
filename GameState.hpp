@@ -199,8 +199,8 @@ private:
     static constexpr float time_before_grab_retract = 1.0f;
     static constexpr float harpoon_vel = 6.0f;
     static constexpr uint32_t max_points = 3;
-    static constexpr float treasure_spawn_radius = 2.0f;
-    static constexpr float time_before_treasure_return = 10.0f;
+    static constexpr float treasure_spawn_radius = 1.0f;
+    static constexpr float time_before_treasure_return = 15.0f;
 
     // determines how close the player has to be to be able to grab the treasure
     static constexpr double player_reach = 1.5;
@@ -212,7 +212,7 @@ private:
     glm::vec3 treasure_spawns[num_teams];
     btVector3 treasure_dims = {0.5f, 0.5f, 0.5f};
     float treasure_timeout[num_teams] = {0.0f, 0.0f};
-    float test_treasure_drop_time = 5.0f;
+    // float test_treasure_drop_time = 5.0f;
     // bullet related members
     static constexpr double scene_size = 500;
     static constexpr unsigned int max_objects = 16000;
@@ -257,4 +257,6 @@ private:
                                  bool A_is_treasure);
     bool treasure_0_is_dropping = false;
     bool treasure_1_is_dropping = false;
+    bool treasure_0_collide = false;
+    bool treasure_1_collide = false;
 };
