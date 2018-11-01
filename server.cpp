@@ -13,6 +13,7 @@
 //when starting game:
 void send_begin(Connection *c, GameState *state, int player_id) {
   if (c) {
+	  std::cout << "Begin " << player_id << std::endl;
     c->send('b'); //begin game- send number of players and that player's ID
     c->send(state->player_count);
     c->send(player_id);
@@ -123,88 +124,99 @@ int main(int argc, char **argv) {
 
   std::unordered_map< int, int > ready_to_start;
 
+  bool playing = false;
+
   auto then = std::chrono::high_resolution_clock::now();
 
-	while (1) {
-    //get updates from clients
-    server.poll([&](Connection *c, Connection::Event evt) {
-      if (evt == Connection::OnOpen) {
-        std::cout << "Connection open" << std::endl;
-        int player_id = state.player_count;
-        player_ledger.insert(std::make_pair(c, player_id));
-        state.add_player(player_id, 0);
-      }
-      else if (evt == Connection::OnClose) {
-        std::cout << "Connection close" << std::endl;
-        //lost connection with player :(
-      }
-      else {
-//        std::cout << "Connection receive" << std::endl;
-        assert(evt == Connection::OnRecv);
-        uint32_t player_id = player_ledger.find(c)->second; // get player ID corresponding to connection
-        Player* player_data = &state.players.find(player_id)->second;
-        if (c->recv_buffer[0] == 'k') {
-          std::cout << "OK to start" << std::endl;
-          c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1);
-          ready_to_start.insert(std::make_pair(player_id, 1));
-        }
-        else if (c->recv_buffer[0] == 'n') {
-          if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
-            return; //wait for more data
-          }
-          else {
-            std::cout << "Nickname/team update" << std::endl;
-            memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
-            memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * Player::NICKNAME_LENGTH);
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
-          }
-        }
-        else if (c->recv_buffer[0] == 'p') {
-          if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
-            return; //wait for more data
-          }
-          else {
-            //std::cout << "Player update" << std::endl;
-            /* vv relocate to server "update"
-            // assert((!has_tr_1 && !has_tr_2) || (has_tr_1 != has_tr_2)); // want to enforce {has neither treasure} or {can have one of two treasures}
-            // or just...
-            // assert !(has_tr_1 && has_tr_2); //want to enforce {doesn't have both treasures}
-            */
-            memcpy(&player_data->position.x, c->recv_buffer.data() + 1 + 0 * sizeof(float), sizeof(float));
-            memcpy(&player_data->position.y, c->recv_buffer.data() + 1 + 1 * sizeof(float), sizeof(float));
-            memcpy(&player_data->position.z, c->recv_buffer.data() + 1 + 2 * sizeof(float), sizeof(float));
-            memcpy(&player_data->velocity.x, c->recv_buffer.data() + 1 + 3 * sizeof(float), sizeof(float));
-            memcpy(&player_data->velocity.y, c->recv_buffer.data() + 1 + 4 * sizeof(float), sizeof(float));
-            memcpy(&player_data->velocity.z, c->recv_buffer.data() + 1 + 5 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.w, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.x, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.y, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
-            memcpy(&player_data->rotation.z, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
+  while (1) {
+	  //get updates from clients
+	  server.poll([&](Connection *c, Connection::Event evt) {
+		  if (evt == Connection::OnOpen) {
+			  std::cout << "Connection open" << std::endl;
+			  int player_id = state.player_count;
+			  player_ledger.insert(std::make_pair(c, player_id));
+			  state.add_player(player_id, 0);
+		  }
+		  else if (evt == Connection::OnClose) {
+			  std::cout << "Connection close" << std::endl;
+			  //lost connection with player :(
+		  }
+		  else {
+			  //        std::cout << "Connection receive" << std::endl;
+			  assert(evt == Connection::OnRecv);
+			  uint32_t player_id = player_ledger.find(c)->second; // get player ID corresponding to connection
+			  Player* player_data = &state.players.find(player_id)->second;
+			  if (c->recv_buffer[0] == 'k') {
+				  std::cout << "OK to start" << std::endl;
+				  c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1);
+				  ready_to_start[player_id] = 1;
+				  if (ready_to_start.size() == state.player_count) { //TODO: and all the values are set to 1
+					  //start game
+					  for (std::pair<Connection*, int> p : player_ledger) {
+						  send_begin(p.first, &state, p.second);
+					  }
+					  playing = true;
+				  }
+			  }
+			  else if (c->recv_buffer[0] == 'n') {
+				  if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
+					  return; //wait for more data
+				  }
+				  else {
+					  std::cout << "Nickname/team update" << std::endl;
+					  memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
+					  memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * Player::NICKNAME_LENGTH);
+					  c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
+				  }
+			  }
+			  else if (c->recv_buffer[0] == 'p') {
+				  if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
+					  return; //wait for more data
+				  }
+				  else {
+					  //std::cout << "Player update" << std::endl;
+					  /* vv relocate to server "update"
+					  // assert((!has_tr_1 && !has_tr_2) || (has_tr_1 != has_tr_2)); // want to enforce {has neither treasure} or {can have one of two treasures}
+					  // or just...
+					  // assert !(has_tr_1 && has_tr_2); //want to enforce {doesn't have both treasures}
+					  */
+					  memcpy(&player_data->position.x, c->recv_buffer.data() + 1 + 0 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->position.y, c->recv_buffer.data() + 1 + 1 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->position.z, c->recv_buffer.data() + 1 + 2 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->velocity.x, c->recv_buffer.data() + 1 + 3 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->velocity.y, c->recv_buffer.data() + 1 + 4 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->velocity.z, c->recv_buffer.data() + 1 + 5 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->rotation.w, c->recv_buffer.data() + 1 + 6 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->rotation.x, c->recv_buffer.data() + 1 + 7 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->rotation.y, c->recv_buffer.data() + 1 + 8 * sizeof(float), sizeof(float));
+					  memcpy(&player_data->rotation.z, c->recv_buffer.data() + 1 + 9 * sizeof(float), sizeof(float));
 
-			bool shot = false;
-			bool grabbed = false;
-            memcpy(&shot, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
-            memcpy(&grabbed, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
-			if (shot) {
-				player_data->shot_harpoon = true;
-			}
-			if (grabbed) {
-				player_data->grab = true;
-			}
+					  bool shot = false;
+					  bool grabbed = false;
+					  memcpy(&shot, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 0 * sizeof(bool), sizeof(bool));
+					  memcpy(&grabbed, c->recv_buffer.data() + 1 + 10 * sizeof(float) + 1 * sizeof(bool), sizeof(bool));
+					  if (shot) {
+						  player_data->shot_harpoon = true;
+					  }
+					  if (grabbed) {
+						  player_data->grab = true;
+					  }
 
-            c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
-            //std::cout << "Received (" << player_data->position.x << ", " << player_data->position.y << ", " << player_data->position.z << "), etc..." << std::endl;
-          }
-        }
-      }
-    }, 0.01);
+					  c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 10 * sizeof(float) + 2 * sizeof(bool));
+					  //std::cout << "Received (" << player_data->position.x << ", " << player_data->position.y << ", " << player_data->position.z << "), etc..." << std::endl;
+				  }
+			  }
+		  }
+	  }, 0.01);
 
-    //based on https://stackoverflow.com/a/14391562
-    auto now = std::chrono::high_resolution_clock::now();
-    float diff = std::chrono::duration_cast<std::chrono::duration<float>>(now - then).count();
-		if (diff > 0.03f) {
-			then = now;
-      update_server(&state, &player_ledger, diff);
-		}
-	}
+	  if (playing) {
+		  //based on https://stackoverflow.com/a/14391562
+		  auto now = std::chrono::high_resolution_clock::now();
+		  float diff = std::chrono::duration_cast<std::chrono::duration<float>>(now - then).count();
+		  if (diff > 0.03f) {
+			  then = now;
+			  update_server(&state, &player_ledger, diff);
+		  }
+	  }
+  }
 }

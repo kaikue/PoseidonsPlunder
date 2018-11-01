@@ -18,7 +18,7 @@
 
 struct GameMode: public Mode
 {
-    GameMode(Client &client);
+    GameMode(Client &client_, int player_id, int player_count, std::vector<int> player_teams);
     virtual ~GameMode();
 
     //handle_event is called when new mouse or keyboard events are received:

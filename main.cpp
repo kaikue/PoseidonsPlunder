@@ -5,7 +5,8 @@
 #include "Load.hpp"
 
 //The 'GameMode' mode plays the game:
-#include "GameMode.hpp"
+//#include "GameMode.hpp"
+#include "LobbyMode.hpp"
 
 //#include "MainMode.hpp"
 
@@ -120,7 +121,8 @@ int main(int argc, char **argv) {
 
 	//------------ create game mode + make current --------------
 
-	Mode::set_current(std::make_shared< GameMode >(client));
+	Mode::set_current(std::make_shared< LobbyMode >(client));
+	//Mode::set_current(std::make_shared< GameMode >(client));
 	//Mode::set_current(std::make_shared< MainMode >());
 
 	//------------ main loop ------------
