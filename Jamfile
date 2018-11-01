@@ -79,6 +79,7 @@ CLIENT_NAMES =
 	depth_program
 	Mode
 	GameMode
+	LobbyMode
 	MenuMode
 	MeshBuffer
 	draw_text
