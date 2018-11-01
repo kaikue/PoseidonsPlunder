@@ -143,7 +143,7 @@ void GameState::add_treasure(uint32_t team)
                         btVector3(treasures[team].position.x, treasures[team].position.y, treasures[team].position.z)));
         auto *box = new btBoxShape(treasure_dims * 0.5f);
         treasure_object->setCollisionShape(box);
-        // treasure_object->setUserIndex(100+team);
+        treasure_object->setUserIndex(100+team);
         treasure_object->setUserPointer((void *) &treasures[team]);
         bt_collision_world->addCollisionObject(treasure_object);
     }
@@ -388,17 +388,18 @@ void GameState::update(float time)
         // player will drop treasure if shot
         // TODO: treasure dynamics
         // testing the dropping of treasure
-        if(test_treasure_drop_time > 0.0f && (treasures[0].held_by != -1 || treasures[1].held_by != -1 )){
-          test_treasure_drop_time -= time;
-        }
+        // if(test_treasure_drop_time > 0.0f && (treasures[0].held_by != -1 || treasures[1].held_by != -1 )){
+        //   test_treasure_drop_time -= time;
+        // }
         // if(test_treasure_drop_time < 0.0f){
         //
         //   treasure_0_is_dropping = true;
         //   treasure_1_is_dropping = true;
         //
         // }
-        if (pair.second.is_shot || test_treasure_drop_time < 0.0f) {
-            test_treasure_drop_time = 5.0f;
+        // if (pair.second.is_shot || test_treasure_drop_time < 0.0f) {
+        if (pair.second.is_shot) {
+            // test_treasure_drop_time = 5.0f;
             pair.second.has_treasure_1 = false;
             pair.second.has_treasure_2 = false;
             for (uint32_t team = 0; team < num_teams; team++) {
@@ -434,17 +435,17 @@ void GameState::update(float time)
             }
         }
 
-        if(treasure_0_is_dropping){
+        if(treasure_0_is_dropping ){
           std::cout << "treasure 0 is dropping " << std::endl;
           treasures[0].position[2] -= 0.01;
-          if(treasures[0].position[2] < 0.0 ){
+          if(treasures[0].position[2] < 0.0){
             treasure_0_is_dropping = false;
           }
         }
         if(treasure_1_is_dropping){
           std::cout << "treasure 1 is dropping " << std::endl;
           treasures[1].position[2] -= 0.01;
-          if(treasures[1].position[2] < 0.0 ){
+          if(treasures[1].position[2] < 0.0){
             treasure_1_is_dropping = false;
           }
         }
@@ -523,16 +524,26 @@ void GameState::update(float time)
                 B_is_player = true;
             }
         }
-        // if(obA->getUserIndex() == 100 || obA->getUserIndex() == 101){
-        //   // std::cout << "is treasure A" << std::endl;
-        //   A_is_treasure = true;
-        //
-        // }
-        // if(obB->getUserIndex() == 100 || obB->getUserIndex() == 101){
-        //   // std::cout << "is treasure B" << std::endl;
-        //   B_is_treasure = true;
-        //
-        // }
+        if(obA->getUserIndex() == 100 || obB->getUserIndex() == 100){
+           if(players.find(obA->getUserIndex()) == players.end() && players.find(obB->getUserIndex()) == players.end()){
+             // std::cout << "treasure 0 is in collision " << std::endl;
+             treasure_0_collide = true;
+           }
+           else{
+             treasure_0_collide = false;
+           }
+
+        }
+        else if(obA->getUserIndex() == 101 || obB->getUserIndex() == 101){
+          if(players.find(obA->getUserIndex()) == players.end() && players.find(obB->getUserIndex()) == players.end()){
+            // std::cout << "treasure 1 is in collision " << std::endl;
+            treasure_1_collide = true;
+
+          }
+          else{
+            treasure_1_collide = false;
+          }
+        }
 
         if (A_is_harpoon || B_is_harpoon) {
             if (A_is_harpoon) {
