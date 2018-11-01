@@ -24,8 +24,13 @@ Server movement validation:
 - Put the built files into PoseidonsPlunder/bullet/build, and the source (headers) into PoseidonsPlunder/bullet/src
 - Or just use Kai's prebuilt bullet: https://www.dropbox.com/s/9bh7d5jfm2hbtxq/bullet.zip?dl=0
 
-## Kai's TODO
-- Add lobby state to establish # players
+## TODO
+- Lobby
+	- actually show teams & nicknames
+	- auto-assign to smaller team when joining?
+	- add ability to cancel "ok to start"
+- send player nicknames when starting game
+- respect team assignments when spawning players
 - remove cout's
 - make everything use Translation struct and sizeof()
 	- send harpoon rotations
