@@ -7,6 +7,7 @@
 #include <functional>
 #include <vector>
 #include <string>
+#include <random>
 
 struct LobbyMode : public Mode {
 	LobbyMode(Client &client);
@@ -40,8 +41,13 @@ struct LobbyMode : public Mode {
 	int player_count = 0;
 	std::vector<int> player_teams;
 	std::vector<char*> nicknames;
+	std::mt19937 rand;
+	std::vector<std::string> names_first;
+	std::vector<std::string> names_second;
 
 	void switch_team();
+
+	std::string get_nickname();
 
 	void change_nickname();
 
