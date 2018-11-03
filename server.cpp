@@ -10,23 +10,29 @@
 
 #include <glm/gtx/string_cast.hpp>
 
+
+//when in lobby:
+void send_lobby_update(Connection *c, GameState *state, int player_id) {
+	if (c) {
+		c->send('u'); //update- send number of players and that player's ID
+		c->send(state->player_count);
+		c->send(player_id);
+
+		c->send('t'); //team info
+		for (int i = 0; i < state->player_count; i++) {
+			c->send(state->players[i].team); //each player ID's team
+			c->send(state->players[i].nickname); //each player ID's nickname
+		}
+	}
+}
+
 //when starting game:
 void send_begin(Connection *c, GameState *state, int player_id) {
   if (c) {
-	  std::cout << "Begin " << player_id << std::endl;
+	std::cout << "Begin " << player_id << std::endl;
     c->send('b'); //begin game- send number of players and that player's ID
-    c->send(state->player_count);
-    c->send(player_id);
-
-    c->send('t'); //team info
-    for (int i = 0; i < state->player_count; i++) {
-      c->send(state->players[i].team); //each player ID's team
-	  c->send(state->players[i].nickname); //each player ID's nickname
-    }
   }
 }
-
-//void send_lobby_update()
 
 //when in game:
 void send_state(Connection *c, GameState *state, int player_id) {
@@ -98,6 +104,13 @@ void send_state(Connection *c, GameState *state, int player_id) {
   }
 }
 
+void update_lobby(GameState *state, std::unordered_map< Connection *, int > *player_ledger) {
+	//send lobby state to all clients
+	for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
+		send_lobby_update(iter->first, state, iter->second);
+	}
+}
+
 void update_server(GameState *state, std::unordered_map< Connection *, int > *player_ledger, float time) {
   state->update(time);
   //send state to all clients
@@ -157,14 +170,15 @@ int main(int argc, char **argv) {
 				  }
 			  }
 			  else if (c->recv_buffer[0] == 'n') {
-				  if (c->recv_buffer.size() < 1 + 10 * sizeof(float) + 2 * sizeof(bool)) {
+				  if (c->recv_buffer.size() < 1 + sizeof(int) + sizeof(char) * Player::NICKNAME_LENGTH) {
 					  return; //wait for more data
 				  }
 				  else {
 					  std::cout << "Nickname/team update" << std::endl;
-					  memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(uint32_t), sizeof(uint32_t));
-					  memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(uint32_t), sizeof(char) * Player::NICKNAME_LENGTH);
-					  c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
+					  memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
+					  memcpy(&player_data->nickname, c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(char) * Player::NICKNAME_LENGTH);
+					  c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(int) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
+					  update_lobby(&state, &player_ledger);
 				  }
 			  }
 			  else if (c->recv_buffer[0] == 'p') {
