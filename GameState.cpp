@@ -325,12 +325,6 @@ void GameState::treasure_drop_collision(const btCollisionObject *treasure_obj,
 
         }
     }
-    // if(treasure_is_0){
-    //   treasure_0_is_dropping = false;
-    // }
-    // else{
-    //   treasure_1_is_dropping = false;
-    // }
 }
 
 void GameState::update(float time)
@@ -587,39 +581,6 @@ void GameState::update(float time)
                 }
             }
         }
-
-        // else if (A_is_treasure || B_is_treasure){
-        //   if(players.find(obA->getUserIndex()) != players.end() || players.find(obB->getUserIndex()) != players.end()){
-        //     std::cout << "here0" << std::endl;
-        //     A_B_is_player = true;
-        //     // continue;
-        //   }
-        //   if(obA->getUserIndex() == 100 && treasure_0_is_dropping && A_is_treasure && !A_B_is_player){
-        //     std::cout << "here1" << std::endl;
-        //     treasure_is_0 = true;
-        //     // treasure_0_is_dropping = false;
-        //     // treasure_drop_collision(obA, obB, contactManifold, treasure_is_0, A_is_treasure);
-        //   }
-        //   else if(obA->getUserIndex() == 101 && treasure_1_is_dropping && A_is_treasure && !A_B_is_player){
-        //     std::cout << "here2" << std::endl;
-        //     treasure_is_0 = false;
-        //     // treasure_1_is_dropping = false;
-        //     // treasure_drop_collision(obA, obB, contactManifold, treasure_is_0, A_is_treasure);
-        //   }
-        //   else if(obB->getUserIndex() == 100 && treasure_0_is_dropping && B_is_treasure && !A_B_is_player){
-        //     std::cout << "here3" << std::endl;
-        //     treasure_is_0 = true;
-        //     // treasure_0_is_dropping = false;
-        //     // treasure_drop_collision(obB, obA, contactManifold, treasure_is_0, A_is_treasure);
-        //   }
-        //   else if(obB->getUserIndex() == 101 && treasure_1_is_dropping && B_is_treasure && !A_B_is_player){
-        //     std::cout << "here4" << std::endl;
-        //     treasure_is_0 = false;
-        //     // treasure_1_is_dropping = false;
-        //     // treasure_drop_collision(obB, obA, contactManifold, treasure_is_0, A_is_treasure);
-        //   }
-        //
-        // }
     }
 
     // handle harpoon position update
