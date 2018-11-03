@@ -149,10 +149,7 @@ std::string LobbyMode::get_nickname() {
 	std::string first = names_first[first_line];
 	std::string second = names_second[second_line];
 	std::string name = first + second;
-	//TODO padding to Player::NICKNAME_LENGTH?
-	if (name.length() > Player::NICKNAME_LENGTH) {
-		//TODO truncate to Player::NICKNAME_LENGTH
-	}
+	name.resize(Player::NICKNAME_LENGTH, ' ');
 	std::cout << name << std::endl;
 	return name;
 }
