@@ -125,11 +125,12 @@ Player &GameMode::get_own_player()
 }
 
 
-void GameMode::spawn_player(uint32_t id, int team)
+void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAME_LENGTH])
 {
     state.players[id] = Player();
     state.harpoons[id] = Harpoon();
 	state.players[id].team = team;
+	state.players[id].nickname = nickname;
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
     players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -182,15 +183,15 @@ void GameMode::spawn_player(uint32_t id, int team)
     }
 }
 
-GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams) : client(client_) {
+GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames) : client(client_) {
     player_id = pid;
 	std::cout << "Starting " << player_id << std::endl;
 	state.player_count = player_count;
 
-	spawn_player(player_id, player_teams[player_id]); //spawn ourselves first
+	spawn_player(player_id, player_teams[player_id], nicknames[player_id]); //spawn ourselves first
     for (int i = 0; i < state.player_count; i++) {
 		if (i != player_id) {
-			spawn_player(i, player_teams[i]);
+			spawn_player(i, player_teams[i], nicknames[i]);
 		}
     }
     {

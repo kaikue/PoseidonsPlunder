@@ -18,7 +18,7 @@
 
 struct GameMode: public Mode
 {
-    GameMode(Client &client_, int player_id, int player_count, std::vector<int> player_teams);
+    GameMode(Client &client_, int player_id, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames);
     virtual ~GameMode();
 
     //handle_event is called when new mouse or keyboard events are received:
@@ -41,7 +41,7 @@ struct GameMode: public Mode
     //starts up a 'quit/resume' pause menu:
     void show_pause_menu();
 
-    void spawn_player(uint32_t id, int team);
+    void spawn_player(uint32_t id, int team, char nickname[Player::NICKNAME_LENGTH]);
 
     inline Player &get_own_player();
 

@@ -38,7 +38,8 @@ struct LobbyMode : public Mode {
 	char nickname[Player::NICKNAME_LENGTH];
 	int player_id = 0;
 	int player_count = 0;
-	std::vector<int> player_teams; //TODO: can this be made an int[]?
+	std::vector<int> player_teams;
+	std::vector<char*> nicknames;
 
 	void switch_team();
 

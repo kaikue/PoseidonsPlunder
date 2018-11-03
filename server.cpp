@@ -21,6 +21,7 @@ void send_begin(Connection *c, GameState *state, int player_id) {
     c->send('t'); //team info
     for (int i = 0; i < state->player_count; i++) {
       c->send(state->players[i].team); //each player ID's team
+	  c->send(state->players[i].nickname); //each player ID's nickname
     }
   }
 }

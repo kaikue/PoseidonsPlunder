@@ -135,7 +135,7 @@ void LobbyMode::change_nickname() {
 }
 
 void LobbyMode::start_game() {
-	std::shared_ptr<GameMode> game = std::make_shared<GameMode>(client, player_id, player_count, player_teams);
+	std::shared_ptr<GameMode> game = std::make_shared<GameMode>(client, player_id, player_count, player_teams, nicknames);
 	Mode::set_current(game);
 }
 
@@ -211,7 +211,7 @@ void LobbyMode::poll_server() {
 				}
 				else if (c->recv_buffer[0] == 't') {
 					//team info
-					if (c->recv_buffer.size() < 1 + player_count * sizeof(int)) {
+					if (c->recv_buffer.size() < 1 + player_count * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int))) {
 						return; //wait for more data
 					}
 					else {
@@ -220,8 +220,11 @@ void LobbyMode::poll_server() {
 							int player_team;
 							memcpy(&player_team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
 							player_teams.push_back(player_team);
+							char nickname[Player::NICKNAME_LENGTH];
+							memcpy(&nickname, c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), Player::NICKNAME_LENGTH * sizeof(char));
+							nicknames.push_back(nickname);
 						}
-						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * sizeof(int));
+						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)));
 						start_game();
 						return;
 					}
