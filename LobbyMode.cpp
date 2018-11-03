@@ -179,8 +179,6 @@ void LobbyMode::update(float elapsed) {
 	}
 
 	poll_server();
-	//std::shared_ptr<GameMode> game = std::make_shared<GameMode>();
-	//Mode::set_current(game);
 }
 
 void LobbyMode::poll_server() {

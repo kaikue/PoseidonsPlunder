@@ -26,6 +26,8 @@ void send_begin(Connection *c, GameState *state, int player_id) {
   }
 }
 
+//void send_lobby_update()
+
 //when in game:
 void send_state(Connection *c, GameState *state, int player_id) {
   if (c) {

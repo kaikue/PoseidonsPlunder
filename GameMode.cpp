@@ -130,7 +130,7 @@ void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAM
     state.players[id] = Player();
     state.harpoons[id] = Harpoon();
 	state.players[id].team = team;
-	state.players[id].nickname = nickname;
+	memcpy(&state.players[id].nickname, nickname, Player::NICKNAME_LENGTH * sizeof(char));
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
     players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
