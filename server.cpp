@@ -120,6 +120,7 @@ int main(int argc, char **argv) {
 			  int player_id = state.player_count;
 			  player_ledger.insert(std::make_pair(c, player_id));
 			  state.add_player(player_id, 0);
+			  update_lobby(&state, &player_ledger);
 		  }
 		  else if (evt == Connection::OnClose) {
 			  std::cout << "Connection close" << std::endl;

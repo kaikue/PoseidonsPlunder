@@ -186,7 +186,6 @@ void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAM
 
 GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames) : client(client_) {
     player_id = pid;
-	std::cout << "Starting " << player_id << std::endl;
 	state.player_count = player_count;
 
 	spawn_player(player_id, player_teams[player_id], nicknames[player_id]); //spawn ourselves first
