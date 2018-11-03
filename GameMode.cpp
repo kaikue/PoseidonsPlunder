@@ -369,7 +369,11 @@ void GameMode::poll_server() {
                             //TODO: don't update position if it's self and close enough?
                             memcpy(&state.players[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
                             memcpy(&state.players[i].velocity, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.players[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::quat));
+
+                            // only update player rotation if it's another player
+                            if (player_id != i) {
+                                memcpy(&state.players[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::quat));
+                            }
 
                             memcpy(&state.harpoons[i].state, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
                             memcpy(&state.harpoons[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::vec3));
@@ -434,8 +438,20 @@ void GameMode::update(float elapsed) {
     for (auto const &pair : state.players) {
 
         players_transform.at(pair.first)->position = state.players.at(pair.first).position;
-        harpoons_transform.at(pair.first)->position = state.harpoons.at(pair.first).position;
-        harpoons_transform.at(pair.first)->rotation = state.harpoons.at(pair.first).rotation;
+
+        // if own harpoon is held by player, update own harpoon
+        if (pair.first == player_id && state.harpoons.at(pair.first).state == 0) {
+            // held by player
+            glm::mat4 harpoon_to_world = get_transform(get_own_player().position, get_own_player().rotation)
+                * state.default_harpoon_to_player;
+            auto harpoon_pos_rot = get_pos_rot(harpoon_to_world);
+
+            harpoons_transform.at(pair.first)->position = harpoon_pos_rot.first;
+            harpoons_transform.at(pair.first)->rotation = harpoon_pos_rot.second;
+        } else {
+            harpoons_transform.at(pair.first)->position = state.harpoons.at(pair.first).position;
+            harpoons_transform.at(pair.first)->rotation = state.harpoons.at(pair.first).rotation;
+        }
 
         glm::mat4 gun_to_world =
             get_transform(state.players.at(pair.first).position, state.players.at(pair.first).rotation)

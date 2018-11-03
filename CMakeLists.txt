@@ -45,6 +45,7 @@ set(CLIENT_FILES
         Mode.cpp
         GameMode.cpp
         MenuMode.cpp
+        LobbyMode.cpp
         MeshBuffer.cpp
         draw_text.cpp
         Sound.cpp)
