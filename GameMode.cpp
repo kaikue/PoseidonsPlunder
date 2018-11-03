@@ -125,15 +125,15 @@ Player &GameMode::get_own_player()
 }
 
 
-void GameMode::spawn_player(uint32_t id)
+void GameMode::spawn_player(uint32_t id, int team)
 {
     state.players[id] = Player();
     state.harpoons[id] = Harpoon();
-	std::cout << "Spawn 1" << std::endl;
+	state.players[id].team = team;
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
     players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-	std::cout << "Spawn 2" << std::endl;
+	
     // only spawn player mesh if not its own
     if (player_id != id) {
         Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
@@ -147,28 +147,23 @@ void GameMode::spawn_player(uint32_t id)
         player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
         player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
-	std::cout << "Spawn 3" << std::endl;
+	
     {
         guns_transform[id] = current_scene->new_transform();
-		std::cout << "Spawn 3.1" << std::endl;
         glm::mat4 gun_to_world =
             get_transform(get_own_player().position, get_own_player().rotation)
                 * state.gun_offset_to_player;
-		std::cout << "Spawn 3.1.1" << std::endl;
         guns_transform[id]->set_transform(gun_to_world);
-		std::cout << "Spawn 3.2" << std::endl;
+		
         Scene::Object *gun_obj = current_scene->new_object(guns_transform[id]);
-		std::cout << "Spawn 3.3" << std::endl;
         gun_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
-		std::cout << "Spawn 3.4" << std::endl;
         MeshBuffer::Mesh const &mesh = meshes->lookup(gun_mesh_name);
         gun_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
         gun_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
-		std::cout << "Spawn 3.5" << std::endl;
         gun_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
         gun_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
-	std::cout << "Spawn 4" << std::endl;
+
     {
         harpoons_transform[id] = current_scene->new_transform();
         harpoons_transform[id]->position = state.harpoons.at(player_id).position;
@@ -185,7 +180,6 @@ void GameMode::spawn_player(uint32_t id)
         harpoon_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
         harpoon_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
-	std::cout << "Spawn Done" << std::endl;
 }
 
 GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams) : client(client_) {
@@ -193,13 +187,12 @@ GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> 
 	std::cout << "Starting " << player_id << std::endl;
 	state.player_count = player_count;
 
-	spawn_player(player_id); //spawn ourselves first
+	spawn_player(player_id, player_teams[player_id]); //spawn ourselves first
     for (int i = 0; i < state.player_count; i++) {
 		if (i != player_id) {
-			spawn_player(i); //TODO: respect teams
+			spawn_player(i, player_teams[i]);
 		}
     }
-	std::cout << "Starting 2" << std::endl;
     {
         camera->transform->set_parent(players_transform.at(player_id));
         camera->transform->set_transform(state.camera_offset_to_player);
@@ -209,12 +202,9 @@ GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> 
         elevation = glm::pitch(camera->transform->rotation);
         azimuth = glm::roll(camera->transform->rotation);
     }
-	std::cout << "Starting 3" << std::endl;
     // spawn treasures on map
     treasures_transform[0]->position = state.treasures[0].position;
     treasures_transform[1]->position = state.treasures[1].position;
-
-	std::cout << "Starting done" << std::endl;
 }
 
 GameMode::~GameMode() {

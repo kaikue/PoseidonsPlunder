@@ -84,7 +84,6 @@ void send_state(Connection *c, GameState *state, int player_id) {
       }*/
     }
     // treasure
-    //TODO
     for (int i = 0; i < 2; i++) {
       glm::vec3 pos = state->treasures[i].position;
       int is_held_by = state->treasures[i].held_by;
@@ -97,12 +96,8 @@ void send_state(Connection *c, GameState *state, int player_id) {
 }
 
 void update_server(GameState *state, std::unordered_map< Connection *, int > *player_ledger, float time) {
-  //TODO: check ready to start, then start game if so
-  //TODO: set state.player_count when starting game
-
   state->update(time);
   //send state to all clients
-  //for (std::pair<Connection *, int> p : player_ledger) {
   for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
     send_state(iter->first, state, iter->second);
   }
