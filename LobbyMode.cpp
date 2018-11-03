@@ -195,16 +195,16 @@ void LobbyMode::poll_server() {
 			while (!(c->recv_buffer.empty())) {
 				assert(event == Connection::OnRecv);
 				// game begins
-				if (c->recv_buffer[0] == 'b') {
-					//begin game- number of players and this player's ID
+				if (c->recv_buffer[0] == 'u') {
+					//lobby update- number of players and this player's ID
 					if (c->recv_buffer.size() < 1 + 2 * sizeof(int)) {
 						return; //wait for more data
 					}
 					else {
-						std::cout << "Begin game." << std::endl;
 						memcpy(&player_count, c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
 						memcpy(&player_id, c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(int));
 						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 2 * sizeof(int));
+						std::cout << "Player count " << player_count << std::endl;
 					}
 				}
 				else if (c->recv_buffer[0] == 't') {
@@ -213,7 +213,6 @@ void LobbyMode::poll_server() {
 						return; //wait for more data
 					}
 					else {
-						std::cout << "receving the info about players' teams" << std::endl;
 						for (int i = 0; i < player_count; i++) {
 							int player_team;
 							memcpy(&player_team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
@@ -223,9 +222,13 @@ void LobbyMode::poll_server() {
 							nicknames.push_back(nickname);
 						}
 						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)));
-						start_game();
-						return;
 					}
+				}
+				else if (c->recv_buffer[0] == 'b') {
+					//begin game
+					c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1);
+					start_game();
+					return;
 				}
 			}
 		}

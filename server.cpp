@@ -10,23 +10,29 @@
 
 #include <glm/gtx/string_cast.hpp>
 
+
+//when in lobby:
+void send_lobby_update(Connection *c, GameState *state, int player_id) {
+	if (c) {
+		c->send('u'); //update- send number of players and that player's ID
+		c->send(state->player_count);
+		c->send(player_id);
+
+		c->send('t'); //team info
+		for (int i = 0; i < state->player_count; i++) {
+			c->send(state->players[i].team); //each player ID's team
+			c->send(state->players[i].nickname); //each player ID's nickname
+		}
+	}
+}
+
 //when starting game:
 void send_begin(Connection *c, GameState *state, int player_id) {
   if (c) {
-	  std::cout << "Begin " << player_id << std::endl;
+	std::cout << "Begin " << player_id << std::endl;
     c->send('b'); //begin game- send number of players and that player's ID
-    c->send(state->player_count);
-    c->send(player_id);
-
-    c->send('t'); //team info
-    for (int i = 0; i < state->player_count; i++) {
-      c->send(state->players[i].team); //each player ID's team
-	  c->send(state->players[i].nickname); //each player ID's nickname
-    }
   }
 }
-
-//void send_lobby_update()
 
 //when in game:
 void send_state(Connection *c, GameState *state, int player_id) {
@@ -69,6 +75,13 @@ void send_state(Connection *c, GameState *state, int player_id) {
       c->send(is_held_by);
     }
   }
+}
+
+void update_lobby(GameState *state, std::unordered_map< Connection *, int > *player_ledger) {
+	//send lobby state to all clients
+	for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
+		send_lobby_update(iter->first, state, iter->second);
+	}
 }
 
 void update_server(GameState *state, std::unordered_map< Connection *, int > *player_ledger, float time) {
