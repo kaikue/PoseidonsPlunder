@@ -201,6 +201,7 @@ private:
     static constexpr float harpoon_vel = 6.0f;
     static constexpr float treasure_spawn_radius = 1.0f;
     static constexpr float time_before_treasure_return = 15.0f;
+    static constexpr float water_depth = 10.0f;
 
     // determines how close the player has to be to be able to grab the treasure
     static constexpr double player_reach = 1.5;
@@ -230,6 +231,7 @@ private:
     std::unordered_map<std::string, btBvhTriangleMeshShape *> collision_meshes;
     std::unordered_map<uint32_t, std::pair<btCollisionObject *, btCollisionObject *>> player_collisions;
     btCollisionObject *treasure_collisions[2];
+    btVector3 bounds_min, bounds_max;
 
     enum class HarpoonCollision
     {
@@ -239,6 +241,8 @@ private:
     {
         Player, Other
     };
+
+    void generate_bounds();
 
     void handle_harpoon_collision(const btCollisionObject *harpoon_obj,
                                   const btCollisionObject *other_obj,

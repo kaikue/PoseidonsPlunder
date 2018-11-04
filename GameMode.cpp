@@ -70,6 +70,11 @@ Load<Scene> scene(LoadTagDefault, []()
     //load transform hierarchy:
     ret->load(data_path("test_level_complex.scene"), [&](Scene &s, Scene::Transform *t, std::string const &m)
     {
+        // client doesn't need to load in gameplay objects
+        if (t->name.find("GM") != std::string::npos) {
+            return;
+        }
+
         Scene::Object *obj = s.new_object(t);
 
         obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
@@ -185,7 +190,8 @@ void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAM
     }
 }
 
-GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames) : client(client_) {
+GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames) : client(client_)
+{
     player_id = pid;
 	state.player_count = player_count;
 

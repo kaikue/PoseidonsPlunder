@@ -46,7 +46,7 @@ GameState::GameState()
             object->setWorldTransform(
                 btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
                             btVector3(t->position.x, t->position.y, t->position.z)));
-            auto *capsule = new btCapsuleShapeZ((btScalar)player_capsule_radius, (btScalar)player_capsule_height);
+            auto *capsule = new btCapsuleShapeZ((btScalar) player_capsule_radius, (btScalar) player_capsule_height);
             object->setCollisionShape(capsule);
             bt_collision_world->addCollisionObject(object);
 
@@ -87,6 +87,11 @@ GameState::GameState()
             object->setCollisionShape(scaled_mesh_shape);
             object->setUserPointer(scaled_mesh_shape);
             bt_collision_world->addCollisionObject(object);
+
+            // extract bounding box from this mesh
+            if (t->name == "CL_Floor") {
+                scaled_mesh_shape->getAabb(object->getWorldTransform(), bounds_min, bounds_max);
+            }
 
         }
         else if (t->name == "Gun") {
@@ -132,6 +137,29 @@ GameState::GameState()
     // spawning treasures
     add_treasure(0);
     add_treasure(1);
+
+    // generate boundaries that players cannot pass
+    generate_bounds();
+}
+
+void GameState::generate_bounds()
+{
+    const std::vector<btVector3> normals =
+        {btVector3(1, 0, 0), btVector3(0, 1, 0), btVector3(0, 0, 1), btVector3(-1, 0, 0), btVector3(0, -1, 0),
+         btVector3(0, 0, -1)};
+
+    const std::vector<btScalar>
+        offsets =
+        {bounds_min.x(), bounds_min.y(), bounds_min.z(), -bounds_max.x(), -bounds_max.y(), -(bounds_max.z() + water_depth)};
+
+
+    for (uint32_t i = 0; i < normals.size(); i++) {
+        auto *object = new btCollisionObject();
+        auto *plane = new btStaticPlaneShape(normals[i], offsets[i]);
+
+        object->setCollisionShape(plane);
+        bt_collision_world->addCollisionObject(object);
+    }
 }
 
 void GameState::add_treasure(uint32_t team)
@@ -143,7 +171,7 @@ void GameState::add_treasure(uint32_t team)
                         btVector3(treasures[team].position.x, treasures[team].position.y, treasures[team].position.z)));
         auto *box = new btBoxShape(treasure_dims * 0.5f);
         treasure_object->setCollisionShape(box);
-        treasure_object->setUserIndex(100+team);
+        treasure_object->setUserIndex(100 + team);
         treasure_object->setUserPointer((void *) &treasures[team]);
         bt_collision_world->addCollisionObject(treasure_object);
     }
@@ -168,7 +196,7 @@ void GameState::add_player(uint32_t id, uint32_t team)
         player_object->setWorldTransform(
             btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                         btVector3(position.x, position.y, position.z)));
-        auto *capsule = new btCapsuleShapeZ((btScalar)player_capsule_radius, (btScalar)player_capsule_height);
+        auto *capsule = new btCapsuleShapeZ((btScalar) player_capsule_radius, (btScalar) player_capsule_height);
         player_object->setCollisionShape(capsule);
 
         player_object->setUserIndex(id);
@@ -356,9 +384,9 @@ void GameState::update(float time)
 
             btVector3 from(cam_pos_rot.first.x, cam_pos_rot.first.y, cam_pos_rot.first.z);
             btVector3 direction(current_dir.x, current_dir.y, current_dir.z);
-            btCollisionWorld::ClosestRayResultCallback closestResults(from, from + direction * (btScalar)player_reach);
+            btCollisionWorld::ClosestRayResultCallback closestResults(from, from + direction * (btScalar) player_reach);
             closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
-            bt_collision_world->rayTest(from, from + direction * (btScalar)player_reach, closestResults);
+            bt_collision_world->rayTest(from, from + direction * (btScalar) player_reach, closestResults);
 
             for (uint32_t team = 0; team < num_teams; team++) {
                 // players cannot grab their own treasure
@@ -399,11 +427,11 @@ void GameState::update(float time)
             for (uint32_t team = 0; team < num_teams; team++) {
                 if (treasures[team].held_by == pair.first) {
                     treasures[team].held_by = -1;
-                    if(team == 0){
-                      treasure_0_is_dropping = true;
+                    if (team == 0) {
+                        treasure_0_is_dropping = true;
                     }
-                    if(team == 1){
-                      treasure_1_is_dropping = true;
+                    if (team == 1) {
+                        treasure_1_is_dropping = true;
                     }
                 }
             }
@@ -429,19 +457,19 @@ void GameState::update(float time)
             }
         }
 
-        if(treasure_0_is_dropping ){
-          std::cout << "treasure 0 is dropping " << std::endl;
-          treasures[0].position[2] -= 0.01f;
-          if(treasures[0].position[2] < 0.0){
-            treasure_0_is_dropping = false;
-          }
+        if (treasure_0_is_dropping) {
+            std::cout << "treasure 0 is dropping " << std::endl;
+            treasures[0].position[2] -= 0.01f;
+            if (treasures[0].position[2] < 0.0) {
+                treasure_0_is_dropping = false;
+            }
         }
-        if(treasure_1_is_dropping){
-          std::cout << "treasure 1 is dropping " << std::endl;
-          treasures[1].position[2] -= 0.01f;
-          if(treasures[1].position[2] < 0.0){
-            treasure_1_is_dropping = false;
-          }
+        if (treasure_1_is_dropping) {
+            std::cout << "treasure 1 is dropping " << std::endl;
+            treasures[1].position[2] -= 0.01f;
+            if (treasures[1].position[2] < 0.0) {
+                treasure_1_is_dropping = false;
+            }
         }
 
         // if treasure is in opposite team's treasure spawn, they score, and the treasure is respawned
@@ -518,25 +546,27 @@ void GameState::update(float time)
                 B_is_player = true;
             }
         }
-        if(obA->getUserIndex() == 100 || obB->getUserIndex() == 100){
-           if(players.find(obA->getUserIndex()) == players.end() && players.find(obB->getUserIndex()) == players.end()){
-             // std::cout << "treasure 0 is in collision " << std::endl;
-             treasure_0_collide = true;
-           }
-           else{
-             treasure_0_collide = false;
-           }
+        if (obA->getUserIndex() == 100 || obB->getUserIndex() == 100) {
+            if (players.find(obA->getUserIndex()) == players.end()
+                && players.find(obB->getUserIndex()) == players.end()) {
+                // std::cout << "treasure 0 is in collision " << std::endl;
+                treasure_0_collide = true;
+            }
+            else {
+                treasure_0_collide = false;
+            }
 
         }
-        else if(obA->getUserIndex() == 101 || obB->getUserIndex() == 101){
-          if(players.find(obA->getUserIndex()) == players.end() && players.find(obB->getUserIndex()) == players.end()){
-            // std::cout << "treasure 1 is in collision " << std::endl;
-            treasure_1_collide = true;
+        else if (obA->getUserIndex() == 101 || obB->getUserIndex() == 101) {
+            if (players.find(obA->getUserIndex()) == players.end()
+                && players.find(obB->getUserIndex()) == players.end()) {
+                // std::cout << "treasure 1 is in collision " << std::endl;
+                treasure_1_collide = true;
 
-          }
-          else{
-            treasure_1_collide = false;
-          }
+            }
+            else {
+                treasure_1_collide = false;
+            }
         }
 
         if (A_is_harpoon || B_is_harpoon) {

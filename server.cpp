@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 
   call_load_functions();
 
-	GameState state;
+  GameState state;
 
   std::unordered_map< Connection *, int > player_ledger;
 
