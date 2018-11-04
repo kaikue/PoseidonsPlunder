@@ -332,8 +332,7 @@ void GameState::update(float time)
     // handle game victory condition update
     for (uint32_t team = 0; team < num_teams; team++) {
         if (current_points[team] >= max_points) {
-            // TODO: implement proper victory and end game mode
-            std::cout << "team " << team << " wins!" << std::endl;
+            return;
         }
     }
 
@@ -362,7 +361,8 @@ void GameState::update(float time)
             bt_collision_world->rayTest(from, from + direction * (btScalar)player_reach, closestResults);
 
             for (uint32_t team = 0; team < num_teams; team++) {
-                if (closestResults.m_collisionObject == treasure_collisions[team]) {
+                // players cannot grab their own treasure
+                if (closestResults.m_collisionObject == treasure_collisions[team] && pair.second.team != team) {
 
                     // TODO: determine if we want treasure to be grabbable if grabbed by another player already
                     treasures[team].held_by = pair.first;

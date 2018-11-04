@@ -405,6 +405,12 @@ void GameMode::poll_server() {
 
 void GameMode::update(float elapsed) {
 
+    for (uint32_t team = 0; team < state.num_teams; team++) {
+        if (state.current_points[team] >= state.max_points) {
+            show_game_over_menu();
+        }
+    }
+
     glm::mat3 directions = camera->transform->make_local_to_world();
 
     // only process movement controls if player is not paralyzed
@@ -494,6 +500,17 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
         std::stringstream score_stream;
         score_stream << "Team 1: " << state.current_points[0] << " * " << "Team 2: " << state.current_points[1];
         draw_message(score_stream.str(), 0.9f);
+
+        {
+            // temporary measure to be explicit about which team player is on
+            std::stringstream team_stream;
+            team_stream << "Team " << (get_own_player().team + 1);
+            std::string message = team_stream.str();
+
+            float height = 0.06f;
+            draw_text(message, glm::vec2(-0.9f * camera->aspect, -0.9f), height, team_colors[get_own_player().team]);
+            draw_text(message, glm::vec2(-0.9f * camera->aspect, -0.9f + 0.01f), height, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+        }
     }
 
     glUseProgram(0);
@@ -531,14 +548,24 @@ void GameMode::show_game_over_menu()
     std::shared_ptr<Mode> game = shared_from_this();
     menu->background = game;
 
-    menu->choices.emplace_back("YOU WIN");
+    std::stringstream score_stream;
+    score_stream << state.current_points[0] << " * " << state.current_points[1];
+
+    menu->choices.emplace_back(score_stream.str());
+
+    if (state.current_points[0] == std::max(state.current_points[0], state.current_points[1])) {
+        menu->choices.emplace_back("TEAM 1 WINS");
+    } else {
+        menu->choices.emplace_back("TEAM 2 WINS");
+    }
+
     menu->choices.emplace_back("");
     menu->choices.emplace_back("QUIT", []()
     {
         Mode::set_current(nullptr);
     });
 
-    menu->selected = 2;
+    menu->selected = 3;
 
     Mode::set_current(menu);
 }

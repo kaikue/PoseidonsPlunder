@@ -65,6 +65,8 @@ struct GameMode: public Mode
     std::unordered_map<uint32_t, Scene::Transform *> players_transform;
     std::unordered_map<uint32_t, Scene::Transform *> guns_transform;
     std::unordered_map<uint32_t, Scene::Transform *> harpoons_transform;
+
+    glm::vec4 team_colors[GameState::num_teams] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
     float azimuth, elevation;
 
     //------ networking ------

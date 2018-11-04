@@ -180,6 +180,7 @@ public:
 
     static constexpr float default_player_speed = 6.0f;
     static constexpr float slowed_player_speed = 4.0f;
+    static constexpr uint32_t max_points = 3;
     glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player;
 
     GameState();
@@ -198,7 +199,6 @@ private:
     static constexpr float dist_before_retract = 20.0f;
     static constexpr float time_before_grab_retract = 1.0f;
     static constexpr float harpoon_vel = 6.0f;
-    static constexpr uint32_t max_points = 3;
     static constexpr float treasure_spawn_radius = 1.0f;
     static constexpr float time_before_treasure_return = 15.0f;
 
