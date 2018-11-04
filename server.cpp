@@ -44,6 +44,9 @@ void send_state(Connection *c, GameState *state, int player_id) {
     bool is_shot = state->players[player_id].is_shot; //whether the player is stunned by a harpoon
     c->send(is_shot);
 
+    //current points
+    c->send(state->current_points);
+
     //players
     for (int i = 0; i < state->player_count; i++) {
       glm::vec3 pos = state->players[i].position;
@@ -69,9 +72,6 @@ void send_state(Connection *c, GameState *state, int player_id) {
       glm::vec3 pos = state->treasures[i].position;
       int is_held_by = state->treasures[i].held_by;
       c->send(pos);
-//      c->send(pos.x);
-//      c->send(pos.y);
-//      c->send(pos.z);
       c->send(is_held_by);
     }
   }

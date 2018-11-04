@@ -24,6 +24,7 @@
 #include <random>
 #include <array>
 #include <type_traits>
+#include <sstream>
 
 Load<MeshBuffer> meshes(LoadTagDefault, []()
 {
@@ -350,40 +351,44 @@ void GameMode::poll_server() {
                 else {
 //                    std::cout << "Receiving info..." << std::endl;
                     assert(c->recv_buffer[0] == 's');
-					size_t packet_len = 1 + 1 * sizeof(bool) + (state.player_count * 20 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int);
+					size_t packet_len = 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (state.player_count * 20 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int);
                     if (c->recv_buffer.size() < packet_len) {
 //                        std::cout << "Num players " << state.player_count << std::endl;
 //                        std::cout << "Buffer size " << c->recv_buffer.size() << ", should be " << (1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) << std::endl;
                         return; //wait for more data
                     }
                     else {
-//                        std::cout << "Copying state" << std::endl;
                         //if buffer length is more than twice the length of a full update, skip all but the last one
 						while (c->recv_buffer.size() >= 2 * packet_len) {
 							c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
 						}
 
+						// update if the player if shot
                         memcpy(&get_own_player().is_shot, c->recv_buffer.data() + 1, sizeof(bool));
+
+						// update current game points
+						memcpy(&state.current_points, c->recv_buffer.data() + 1 + 1 * sizeof(bool), 2 * sizeof(uint32_t));
+
                         // update the players and the harpoons
                         for (int i = 0; i < state.player_count; i++) {
                             //TODO: don't update position if it's self and close enough?
-                            memcpy(&state.players[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.players[i].velocity, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
+                            memcpy(&state.players[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
+                            memcpy(&state.players[i].velocity, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
 
                             // only update player rotation if it's another player
                             if (player_id != i) {
-                                memcpy(&state.players[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::quat));
+                                memcpy(&state.players[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::quat));
                             }
 
-                            memcpy(&state.harpoons[i].state, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
-                            memcpy(&state.harpoons[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.harpoons[i].velocity, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 13) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.harpoons[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + (i * 20 + 16) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::quat));
+                            memcpy(&state.harpoons[i].state, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
+                            memcpy(&state.harpoons[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::vec3));
+                            memcpy(&state.harpoons[i].velocity, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 13) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::vec3));
+                            memcpy(&state.harpoons[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 16) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::quat));
                         }
                         // update treasure pos and state
                         for (int j = 0; j < 2; j++) {
-                            memcpy(&state.treasures[j].position, c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 20 + j * 3 + 0) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + sizeof(bool) + (state.player_count * 20 + j * 3 + 3) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(int));
+                            memcpy(&state.treasures[j].position, c->recv_buffer.data() + 1 + sizeof(bool) + 2 * sizeof(uint32_t) + (state.player_count * 20 + j * 3 + 0) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(glm::vec3));
+                            memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + sizeof(bool) + 2 * sizeof(uint32_t) + (state.player_count * 20 + j * 3 + 3) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(int));
                         }
 
                         //1 for 's' char
@@ -431,7 +436,6 @@ void GameMode::update(float elapsed) {
     controls.grab = false;
 
     // server will call this
-//    state.update(elapsed);
     poll_server(); //TODO: not every frame?
 
     // update gun position & rotation
@@ -484,6 +488,13 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
     camera->aspect = drawable_size.x / float(drawable_size.y);
 
     scene->draw(camera);
+
+    // only draw score if this is the foreground
+    if (Mode::current == shared_from_this()) {
+        std::stringstream score_stream;
+        score_stream << "Team 1: " << state.current_points[0] << " * " << "Team 2: " << state.current_points[1];
+        draw_message(score_stream.str(), 0.9f);
+    }
 
     glUseProgram(0);
 
