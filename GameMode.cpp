@@ -273,7 +273,7 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             float pitch = evt.motion.yrel / float(window_size.y) * camera->fovy;
 
             azimuth -= yaw;
-            elevation -= pitch;
+            elevation = glm::clamp(elevation - pitch, 0.0f, static_cast<float>(M_PI));
 
             /// Build a quaternion from euler angles (pitch, yaw, roll), in radians.
             camera->transform->rotation = glm::quat(glm::vec3(elevation, 0.0f, azimuth));
@@ -492,7 +492,7 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
     glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.81f, 0.81f, 0.76f)));
     glUniform3fv(vertex_color_program->sun_direction_vec3, 1,
                  glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
-    glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.4f, 0.4f, 0.45f)));
+    glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.125, 0.364, 0.454)));
     glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
     glUseProgram(0);
 

@@ -150,7 +150,8 @@ void GameState::generate_bounds()
 
     const std::vector<btScalar>
         offsets =
-        {bounds_min.x(), bounds_min.y(), bounds_min.z(), -bounds_max.x(), -bounds_max.y(), -(bounds_max.z() + water_depth)};
+        {bounds_min.x(), bounds_min.y(), bounds_min.z(), -bounds_max.x(), -bounds_max.y(),
+         -(bounds_max.z() + water_depth)};
 
 
     for (uint32_t i = 0; i < normals.size(); i++) {
@@ -389,8 +390,9 @@ void GameState::update(float time)
             bt_collision_world->rayTest(from, from + direction * (btScalar) player_reach, closestResults);
 
             for (uint32_t team = 0; team < num_teams; team++) {
-                // players cannot grab their own treasure
-                if (closestResults.m_collisionObject == treasure_collisions[team] && pair.second.team != team) {
+                // players cannot grab their own treasure, and cannot hold two treasures at once
+                if (closestResults.m_collisionObject == treasure_collisions[team] && pair.second.team != team
+                    && !pair.second.has_treasure_1 && !pair.second.has_treasure_2) {
 
                     // TODO: determine if we want treasure to be grabbable if grabbed by another player already
                     treasures[team].held_by = pair.first;

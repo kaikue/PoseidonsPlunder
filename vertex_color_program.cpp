@@ -33,7 +33,7 @@ in vec4 color;
 out vec4 fragColor;
 
 const vec3 fogColor = vec3(0.235, 0.4, 0.47);
-const float FogDensity = 0.04;
+const float FogDensity = 0.02;
 
 void main() {
 	vec3 total_light = vec3(0.0, 0.0, 0.0);
