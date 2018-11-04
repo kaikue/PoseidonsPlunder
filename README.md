@@ -29,8 +29,6 @@ Server movement validation:
 	- actually show teams & nicknames
 	- auto-assign to smaller team when joining?
 	- add ability to cancel "ok to start"
-- send player nicknames when starting game
-- respect team assignments when spawning players
 - remove cout's
 - make everything use Translation struct and sizeof()
 	- send harpoon rotations

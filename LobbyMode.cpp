@@ -11,6 +11,8 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <iterator>
+#include <time.h>
 
 //---------- resources ------------
 Load< MeshBuffer > l_menu_meshes(LoadTagInit, [](){
@@ -74,6 +76,14 @@ Load< GLuint > l_fade_program(LoadTagInit, [](){
 
 //----------------------
 
+std::vector<std::string> read_file(std::string url) {
+	//from https://stackoverflow.com/a/15138839
+	std::ifstream is(url);
+	std::istream_iterator<std::string> start(is), end;
+	std::vector<std::string> result(start, end);
+	return result;
+}
+
 LobbyMode::LobbyMode(Client &client_) : client(client_) {
 	background = nullptr;
 
@@ -102,7 +112,14 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 
 	selected = 2;
 
-	
+	names_first = read_file("names_first.txt");
+	names_second = read_file("names_second.txt");
+
+	rand = std::mt19937((unsigned int)time(0));
+	std::string nick = get_nickname();
+	strcpy(nickname, nick.c_str());
+
+	//TODO: assign starting team based on which team is smaller?
 }
 
 void LobbyMode::send_lobby_info(Connection *c) {
@@ -126,9 +143,21 @@ void LobbyMode::switch_team() {
 	}
 }
 
+std::string LobbyMode::get_nickname() {
+	int first_line = rand() % names_first.size();
+	int second_line = rand() % names_second.size();
+	std::string first = names_first[first_line];
+	std::string second = names_second[second_line];
+	std::string name = first + second;
+	name.resize(Player::NICKNAME_LENGTH, ' ');
+	std::cout << name << std::endl;
+	return name;
+}
+
 void LobbyMode::change_nickname() {
-	std::string nick = "asdfghjkasdfghj"; //TODO
+	std::string nick = get_nickname();
 	strcpy(nickname, nick.c_str());
+
 	if (client.connection) {
 		send_lobby_info(&client.connection);
 	}
