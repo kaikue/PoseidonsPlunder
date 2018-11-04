@@ -64,7 +64,7 @@ Load<Scene> scene(LoadTagDefault, []()
     vertex_color_program_info->program = vertex_color_program->program;
     vertex_color_program_info->vao = *meshes_for_vertex_color_program;
     vertex_color_program_info->mvp_mat4 = vertex_color_program->object_to_clip_mat4;
-    vertex_color_program_info->mv_mat4x3 = vertex_color_program->object_to_light_mat4x3;
+    vertex_color_program_info->mv_mat4 = vertex_color_program->object_to_light_mat4x3;
     vertex_color_program_info->itmv_mat3 = vertex_color_program->normal_to_light_mat3;
 
     //load transform hierarchy:
@@ -141,7 +141,7 @@ void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAM
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
     players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-	
+
     // only spawn player mesh if not its own
     if (player_id != id) {
         Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
@@ -155,14 +155,14 @@ void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAM
         player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
         player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
-	
+
     {
         guns_transform[id] = current_scene->new_transform();
         glm::mat4 gun_to_world =
             get_transform(get_own_player().position, get_own_player().rotation)
                 * state.gun_offset_to_player;
         guns_transform[id]->set_transform(gun_to_world);
-		
+
         Scene::Object *gun_obj = current_scene->new_object(guns_transform[id]);
         gun_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
         MeshBuffer::Mesh const &mesh = meshes->lookup(gun_mesh_name);
