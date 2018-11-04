@@ -41,6 +41,8 @@ struct GameMode: public Mode
     //starts up a 'quit/resume' pause menu:
     void show_pause_menu();
 
+    void show_game_over_menu();
+
     void spawn_player(uint32_t id, int team, char nickname[Player::NICKNAME_LENGTH]);
 
     inline Player &get_own_player();

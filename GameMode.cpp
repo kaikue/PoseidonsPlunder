@@ -523,3 +523,22 @@ void GameMode::show_pause_menu()
 
     Mode::set_current(menu);
 }
+
+void GameMode::show_game_over_menu()
+{
+    std::shared_ptr<MenuMode> menu = std::make_shared<MenuMode>();
+
+    std::shared_ptr<Mode> game = shared_from_this();
+    menu->background = game;
+
+    menu->choices.emplace_back("YOU WIN");
+    menu->choices.emplace_back("");
+    menu->choices.emplace_back("QUIT", []()
+    {
+        Mode::set_current(nullptr);
+    });
+
+    menu->selected = 2;
+
+    Mode::set_current(menu);
+}

@@ -112,10 +112,14 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 
 	selected = 2;
 
-	names_first = read_file("names_first.txt");
-	names_second = read_file("names_second.txt");
+	names_first = read_file(data_path("names_first.txt"));
+	names_second = read_file(data_path("names_second.txt"));
 
-	rand = std::mt19937((unsigned int)time(0));
+	std::random_device rd;
+	gen = std::mt19937(rd());
+	dist_name_first = std::uniform_int_distribution<uint32_t>(0, names_first.size() - 1);
+	dist_name_second = std::uniform_int_distribution<uint32_t>(0, names_second.size() - 1);
+
 	std::string nick = get_nickname();
 	strcpy(nickname, nick.c_str());
 
@@ -144,8 +148,8 @@ void LobbyMode::switch_team() {
 }
 
 std::string LobbyMode::get_nickname() {
-	int first_line = rand() % names_first.size();
-	int second_line = rand() % names_second.size();
+	uint32_t first_line = dist_name_first(gen);
+	uint32_t second_line = dist_name_second(gen);
 	std::string first = names_first[first_line];
 	std::string second = names_second[second_line];
 	std::string name = first + second;

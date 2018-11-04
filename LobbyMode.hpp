@@ -41,7 +41,8 @@ struct LobbyMode : public Mode {
 	int player_count = 0;
 	std::vector<int> player_teams;
 	std::vector<char*> nicknames;
-	std::mt19937 rand;
+	std::mt19937 gen;
+	std::uniform_int_distribution<uint32_t> dist_name_first, dist_name_second;
 	std::vector<std::string> names_first;
 	std::vector<std::string> names_second;
 
