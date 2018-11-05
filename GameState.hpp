@@ -16,12 +16,13 @@
 
 #include "read_chunk.hpp"
 
-struct Translation {
-  //TODO: use this, static_assert the size somewhere
-  //Contains position, velocity, and rotation in one convenient struct
-  glm::vec3 position;
-  glm::vec3 velocity;
-  glm::quat rotation;
+struct Translation
+{
+    //TODO: use this, static_assert the size somewhere
+    //Contains position, velocity, and rotation in one convenient struct
+    glm::vec3 position;
+    glm::vec3 velocity;
+    glm::quat rotation;
 };
 
 struct Player
@@ -55,6 +56,7 @@ struct Treasure
 {
     int team;
     glm::vec3 position;
+    glm::quat rotation;
     int held_by = -1; //player_id of holding player, or -1 if not held
 };
 
@@ -181,7 +183,8 @@ public:
     static constexpr float default_player_speed = 6.0f;
     static constexpr float slowed_player_speed = 4.0f;
     static constexpr uint32_t max_points = 3;
-    glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player;
+    glm::mat4 gun_offset_to_player, default_harpoon_offset_to_gun, camera_offset_to_player, default_harpoon_to_player,
+        treasure_offset_to_player;
 
     GameState();
 

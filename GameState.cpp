@@ -117,11 +117,16 @@ GameState::GameState()
             treasure_spawns[0] = t->position;
             treasures[0].team = 0;
             treasures[0].position = t->position;
+            treasures[0].rotation = t->rotation;
         }
         if (t->name == "Treasure2") {
             treasure_spawns[1] = t->position;
             treasures[1].team = 1;
             treasures[1].position = t->position;
+            treasures[1].rotation = t->rotation;
+        }
+        if (t->name == "GM_Treasure_Offset") {
+            treasure_offset_to_player = t->make_local_to_parent();
         }
     }
 
@@ -168,7 +173,10 @@ void GameState::add_treasure(uint32_t team)
     auto *treasure_object = new btCollisionObject();
     {
         treasure_object->setWorldTransform(
-            btTransform(btQuaternion(0.0f, 0.0f, 0.0f, 1.0f),
+            btTransform(btQuaternion(treasures[team].rotation.x,
+                                     treasures[team].rotation.y,
+                                     treasures[team].rotation.z,
+                                     treasures[team].rotation.w),
                         btVector3(treasures[team].position.x, treasures[team].position.y, treasures[team].position.z)));
         auto *box = new btBoxShape(treasure_dims * 0.5f);
         treasure_object->setCollisionShape(box);
@@ -379,29 +387,42 @@ void GameState::update(float time)
 
         if (pair.second.grab) {
 
-            glm::mat4 cam_to_world =
-                get_transform(pair.second.position, pair.second.rotation) * camera_offset_to_player;
-            auto cam_pos_rot = get_pos_rot(cam_to_world);
-
-            btVector3 from(cam_pos_rot.first.x, cam_pos_rot.first.y, cam_pos_rot.first.z);
-            btVector3 direction(current_dir.x, current_dir.y, current_dir.z);
-            btCollisionWorld::ClosestRayResultCallback closestResults(from, from + direction * (btScalar) player_reach);
-            closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
-            bt_collision_world->rayTest(from, from + direction * (btScalar) player_reach, closestResults);
-
-            for (uint32_t team = 0; team < num_teams; team++) {
-                // players cannot grab their own treasure, and cannot hold two treasures at once
-                if (closestResults.m_collisionObject == treasure_collisions[team] && pair.second.team != team
-                    && !pair.second.has_treasure_1 && !pair.second.has_treasure_2) {
-
-                    // TODO: determine if we want treasure to be grabbable if grabbed by another player already
-                    treasures[team].held_by = pair.first;
-
-                    if (team == 0) {
-                        pair.second.has_treasure_1 = true;
+            // player can drop the treasure if they have it, mostly for debug purposes
+            if (pair.second.has_treasure_1 || pair.second.has_treasure_2) {
+                pair.second.has_treasure_1 = false;
+                pair.second.has_treasure_2 = false;
+                for (uint32_t team = 0; team < num_teams; team++) {
+                    if (treasures[team].held_by == pair.first) {
+                        treasures[team].held_by = -1;
                     }
-                    else if (team == 1) {
-                        pair.second.has_treasure_2 = true;
+                }
+            }
+            else {
+                glm::mat4 cam_to_world =
+                    get_transform(pair.second.position, pair.second.rotation) * camera_offset_to_player;
+                auto cam_pos_rot = get_pos_rot(cam_to_world);
+
+                btVector3 from(cam_pos_rot.first.x, cam_pos_rot.first.y, cam_pos_rot.first.z);
+                btVector3 direction(current_dir.x, current_dir.y, current_dir.z);
+                btCollisionWorld::ClosestRayResultCallback
+                    closestResults(from, from + direction * (btScalar) player_reach);
+                closestResults.m_flags |= btTriangleRaycastCallback::kF_FilterBackfaces;
+                bt_collision_world->rayTest(from, from + direction * (btScalar) player_reach, closestResults);
+
+                for (uint32_t team = 0; team < num_teams; team++) {
+                    // players cannot grab their own treasure, and cannot hold two treasures at once
+                    if (closestResults.m_collisionObject == treasure_collisions[team] && pair.second.team != team
+                        && !pair.second.has_treasure_1 && !pair.second.has_treasure_2) {
+
+                        // TODO: determine if we want treasure to be grabbable if grabbed by another player already
+                        treasures[team].held_by = pair.first;
+
+                        if (team == 0) {
+                            pair.second.has_treasure_1 = true;
+                        }
+                        else if (team == 1) {
+                            pair.second.has_treasure_2 = true;
+                        }
                     }
                 }
             }
@@ -445,7 +466,16 @@ void GameState::update(float time)
 
         if (treasures[team].held_by != -1) {
             treasure_timeout[team] = 0.0f;
-            treasures[team].position = players.at(static_cast<uint32_t>(treasures[team].held_by)).position;
+            glm::vec3 player_pos = players.at(static_cast<uint32_t>(treasures[team].held_by)).position;
+            glm::quat player_rot = players.at(static_cast<uint32_t>(treasures[team].held_by)).rotation;
+            glm::mat4 treasure_to_world =
+                get_transform(player_pos, player_rot) * treasure_offset_to_player;
+            auto treasure_pos_rot = get_pos_rot(treasure_to_world);
+
+            std::cout << "treasure world pos: " << glm::to_string(treasure_pos_rot.first) << std::endl;
+
+            treasures[team].position = treasure_pos_rot.first;
+            treasures[team].rotation = treasure_pos_rot.second;
 
         }
         else if (glm::distance(treasures[team].position, treasure_spawns[team]) > treasure_spawn_radius) {
@@ -491,6 +521,15 @@ void GameState::update(float time)
             treasures[team].held_by = -1;
             treasures[team].position = treasure_spawns[team];
         }
+
+        treasure_collisions[team]
+            ->setWorldTransform(btTransform(btQuaternion(treasures[team].rotation.x,
+                                                         treasures[team].rotation.y,
+                                                         treasures[team].rotation.z,
+                                                         treasures[team].rotation.w),
+                                            btVector3(treasures[team].position.x,
+                                                      treasures[team].position.y,
+                                                      treasures[team].position.z)));
     }
 
     for (auto const &pair : player_collisions) {

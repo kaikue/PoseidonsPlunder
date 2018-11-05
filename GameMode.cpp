@@ -75,6 +75,23 @@ Load<Scene> scene(LoadTagDefault, []()
             return;
         }
 
+        if (t->name == "Gun") {
+            gun_mesh_name = m;
+            return;
+        }
+        if (t->name == "Harpoon") {
+            harpoon_mesh_name = m;
+            return;
+        }
+        if (t->name == "Player") {
+            player_mesh_name = m;
+            return;
+        }
+        if (t->name == "Rope") {
+            rope_mesh_name = m;
+            return;
+        }
+
         Scene::Object *obj = s.new_object(t);
 
         obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
@@ -85,11 +102,6 @@ Load<Scene> scene(LoadTagDefault, []()
 
         obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
         obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
-
-        if (t->name == "Gun") gun_mesh_name = m;
-        if (t->name == "Harpoon") harpoon_mesh_name = m;
-        if (t->name == "Player") player_mesh_name = m;
-        if (t->name == "Rope") rope_mesh_name = m;
     });
 
     //look up the camera:
@@ -475,8 +487,20 @@ void GameMode::update(float elapsed) {
         guns_transform.at(pair.first)->set_transform(gun_to_world);
     }
 
-    treasures_transform[0]->position = state.treasures[0].position;
-    treasures_transform[1]->position = state.treasures[1].position;
+    glm::vec3 player_pos = get_own_player().position;
+    glm::quat player_rot = get_own_player().rotation;
+    glm::mat4 treasure_to_world =
+        get_transform(player_pos, player_rot) * state.treasure_offset_to_player;
+    auto treasure_pos_rot = get_pos_rot(treasure_to_world);
+
+    for (int team = 0; team < state.num_teams; team++) {
+        if (state.treasures[team].held_by == player_id) {
+            treasures_transform[team]->position = treasure_pos_rot.first;
+//            treasures_transform[team]->rotation = treasure_pos_rot.second;
+        } else {
+            treasures_transform[team]->position = state.treasures[team].position;
+        }
+    }
 
 }
 
