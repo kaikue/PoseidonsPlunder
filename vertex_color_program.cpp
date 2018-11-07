@@ -34,7 +34,11 @@ in vec4 color;
 out vec4 fragColor;
 
 const vec3 fogColor = vec3(0.235, 0.4, 0.47);
-const float FogDensity = 0.02;
+const float FogDensity = 0.03;
+
+const vec3 waterGradient = vec3(0.341, 0.91, 0.918);
+const float total_water_depth = 10;
+const float gradient_bias = 0.5;
 
 void main() {
 	vec3 total_light = vec3(0.0, 0.0, 0.0);
@@ -56,6 +60,10 @@ void main() {
 	float fogFactor = 1.0 /exp( (dist * FogDensity) * (dist * FogDensity));
 	fogFactor = clamp( fogFactor, 0.0, 1.0 );
 	vec3 final_color = mix(fogColor, light_color, fogFactor);
+
+    // underwater gradient
+    vec3 gradient_color = waterGradient * ((position.z / total_water_depth) + gradient_bias);
+    final_color = final_color * gradient_color;
 
 	fragColor = vec4(final_color, color.a);
 }

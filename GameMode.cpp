@@ -226,6 +226,16 @@ GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> 
     // spawn treasures on map
     treasures_transform[0]->position = state.treasures[0].position;
     treasures_transform[1]->position = state.treasures[1].position;
+
+    // OpenGL setup
+    //set up light position + color:
+    glUseProgram(vertex_color_program->program);
+    glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.81f, 0.81f, 0.76f)));
+    glUniform3fv(vertex_color_program->sun_direction_vec3, 1,
+                 glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
+    glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.2, 0.2, 0.3)));
+    glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
+    glUseProgram(0);
 }
 
 GameMode::~GameMode() {
@@ -512,13 +522,8 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    //set up light position + color:
+    // setup camera position
     glUseProgram(vertex_color_program->program);
-    glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.81f, 0.81f, 0.76f)));
-    glUniform3fv(vertex_color_program->sun_direction_vec3, 1,
-                 glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
-    glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.125, 0.364, 0.454)));
-    glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
     auto cam_pos_rot = get_pos_rot(camera->transform->make_local_to_world());
     glUniform3fv(vertex_color_program->view_pos_vec3, 1, glm::value_ptr(cam_pos_rot.first));
     glUseProgram(0);
