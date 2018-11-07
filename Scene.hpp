@@ -191,10 +191,7 @@ struct Scene {
 	void draw(Lamp const *lamp, Object::ProgramType = Object::ProgramTypeDefault ) const;
 
 	//More general draw function. Will render with a specified projection transformation and use programs in the given slot of all objects:
-	void draw(
-		glm::mat4 const &world_to_clip,
-		glm::mat4 const &world_to_view,
-		Object::ProgramType program_type) const;
+    void draw(glm::mat4 const &world_to_clip, Object::ProgramType program_type) const;
 
 	~Scene(); //destructor deallocates transforms, objects, cameras
 

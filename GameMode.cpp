@@ -64,7 +64,7 @@ Load<Scene> scene(LoadTagDefault, []()
     vertex_color_program_info->program = vertex_color_program->program;
     vertex_color_program_info->vao = *meshes_for_vertex_color_program;
     vertex_color_program_info->mvp_mat4 = vertex_color_program->object_to_clip_mat4;
-    vertex_color_program_info->mv_mat4 = vertex_color_program->object_to_light_mat4x3;
+    vertex_color_program_info->mv_mat4 = vertex_color_program->object_to_light_mat4;
     vertex_color_program_info->itmv_mat3 = vertex_color_program->normal_to_light_mat3;
 
     //load transform hierarchy:
@@ -518,6 +518,8 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
                  glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
     glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.125, 0.364, 0.454)));
     glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
+    auto cam_pos_rot = get_pos_rot(camera->transform->make_local_to_world());
+    glUniform3fv(vertex_color_program->view_pos_vec3, 1, glm::value_ptr(cam_pos_rot.first));
     glUseProgram(0);
 
     //fix aspect ratio of camera

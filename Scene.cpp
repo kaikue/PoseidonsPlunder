@@ -198,7 +198,7 @@ void Scene::draw(Scene::Camera const *camera, Object::ProgramType program_type) 
 	glm::mat4 world_to_camera = camera->transform->make_world_to_local();
 	glm::mat4 world_to_clip = camera->make_projection() * world_to_camera;
 
-	draw(world_to_clip, world_to_camera, program_type);
+	draw(world_to_clip, program_type);
 }
 
 void Scene::draw(Scene::Lamp const *lamp, Object::ProgramType program_type) const {
@@ -208,11 +208,11 @@ void Scene::draw(Scene::Lamp const *lamp, Object::ProgramType program_type) cons
 	glm::mat4 world_to_lamp = lamp->transform->make_world_to_local();
 	glm::mat4 world_to_clip = lamp->make_projection() * world_to_lamp;
 
-	draw(world_to_clip, world_to_lamp, program_type);
+	draw(world_to_clip, program_type);
 }
 
 
-void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4 const &world_to_view, Object::ProgramType program_type) const {
+void Scene::draw(glm::mat4 const &world_to_clip, Object::ProgramType program_type) const {
 	assert(program_type < Object::ProgramTypes);
 
 	for (Scene::Object *object = first_object; object != nullptr; object = object->alloc_next) {
@@ -226,7 +226,7 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4 const &world_to_view,
 		glm::mat4 mvp = world_to_clip * local_to_world;
 
 		//compute modelview (object space to camera local space) matrix for this object:
-		glm::mat4 mv = world_to_view * local_to_world;
+		glm::mat4 mv = local_to_world;
 
 		//NOTE: inverse cancels out transpose unless there is scale involved
 		glm::mat3 itmv = glm::inverse(glm::transpose(glm::mat3(mv)));

@@ -27,6 +27,7 @@ uniform vec3 sun_direction;
 uniform vec3 sun_color;
 uniform vec3 sky_direction;
 uniform vec3 sky_color;
+uniform vec3 view_pos;
 in vec4 position;
 in vec3 normal;
 in vec4 color;
@@ -51,7 +52,7 @@ void main() {
 	vec3 light_color = color.rgb * total_light;
 
 	// underwater fog effect
-	float dist = length(position.xyz);
+	float dist = length(view_pos - position.xyz);
 	float fogFactor = 1.0 /exp( (dist * FogDensity) * (dist * FogDensity));
 	fogFactor = clamp( fogFactor, 0.0, 1.0 );
 	vec3 final_color = mix(fogColor, light_color, fogFactor);
@@ -62,13 +63,14 @@ void main() {
 	);
 
 	object_to_clip_mat4 = glGetUniformLocation(program, "object_to_clip");
-	object_to_light_mat4x3 = glGetUniformLocation(program, "object_to_light");
+	object_to_light_mat4 = glGetUniformLocation(program, "object_to_light");
 	normal_to_light_mat3 = glGetUniformLocation(program, "normal_to_light");
 
 	sun_direction_vec3 = glGetUniformLocation(program, "sun_direction");
 	sun_color_vec3 = glGetUniformLocation(program, "sun_color");
 	sky_direction_vec3 = glGetUniformLocation(program, "sky_direction");
 	sky_color_vec3 = glGetUniformLocation(program, "sky_color");
+	view_pos_vec3 = glGetUniformLocation(program, "view_pos");
 }
 
 Load< VertexColorProgram > vertex_color_program(LoadTagInit, [](){
