@@ -87,12 +87,6 @@ GameState::GameState()
             object->setCollisionShape(scaled_mesh_shape);
             object->setUserPointer(scaled_mesh_shape);
             bt_collision_world->addCollisionObject(object);
-
-            // extract bounding box from this mesh
-            if (t->name == "CL_Floor") {
-                scaled_mesh_shape->getAabb(object->getWorldTransform(), bounds_min, bounds_max);
-            }
-
         }
         else if (t->name == "Gun") {
             gun_offset_to_player = t->make_local_to_parent();
@@ -108,6 +102,29 @@ GameState::GameState()
             if (t->name == "GM_Spawn_Team2") {
                 team_spawns_pos[1] = t->position;
                 team_spawns_rot[1] = t->rotation;
+            }
+            // extract bounding box from this mesh
+            if (t->name == "GM_Bounds") {
+                CollisionMeshBuffer::CollisionMesh const &mesh = meshes_for_collision->lookup(m);
+                btStridingMeshInterface *tri_array = new btTriangleIndexVertexArray((int) mesh.triangle_count,
+                                                                                    (int *) &(meshes_for_collision
+                                                                                        ->triangles[mesh.triangle_start]
+                                                                                        .x),
+                                                                                    (int) sizeof(glm::uvec3),
+                                                                                    (int) meshes_for_collision->vertices
+                                                                                        .size(),
+                                                                                    (btScalar *) &(meshes_for_collision
+                                                                                        ->vertices[0].x),
+                                                                                    (int) sizeof(glm::vec3));
+                auto *mesh_shape = new btBvhTriangleMeshShape(tri_array, true);
+                auto scaled_mesh_shape =
+                    new btScaledBvhTriangleMeshShape(mesh_shape, btVector3(t->scale.x, t->scale.y, t->scale.z));
+                auto transform = btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
+                                             btVector3(t->position.x, t->position.y, t->position.z));
+                scaled_mesh_shape->getAabb(transform, bounds_min, bounds_max);
+                delete tri_array;
+                delete mesh_shape;
+                delete scaled_mesh_shape;
             }
         }
     });
