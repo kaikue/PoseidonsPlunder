@@ -7,6 +7,7 @@
 #include "Connection.hpp"
 #include "GameState.hpp"
 #include "Scene.hpp"
+#include "Skybox.hpp"
 
 #include <SDL.h>
 #include <glm/glm.hpp>
@@ -68,6 +69,8 @@ struct GameMode: public Mode
 
     glm::vec4 team_colors[GameState::num_teams] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
     float azimuth, elevation;
+
+    Skybox underwater_skybox;
 
     //------ networking ------
     Client &client; //client object; manages connection to server.

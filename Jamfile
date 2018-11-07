@@ -84,6 +84,7 @@ CLIENT_NAMES =
 	MeshBuffer
 	draw_text
 	Sound
+	Skybox
 	;
 
 if $(OS) = NT {

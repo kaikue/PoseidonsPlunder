@@ -10,6 +10,7 @@
 #include "compile_program.hpp" //helper to compile opengl shader programs
 #include "draw_text.hpp" //helper to... um.. draw text
 #include "vertex_color_program.hpp"
+#include "load_save_png.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -202,7 +203,7 @@ void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAM
     }
 }
 
-GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames) : client(client_)
+GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames) : underwater_skybox("textures/underwater_cube_map"), client(client_)
 {
     player_id = pid;
 	state.player_count = player_count;
@@ -527,8 +528,11 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
 
     scene->draw(camera);
 
-    // only draw score if this is the foreground
+    // only draw score and skybox if this is the foreground
     if (Mode::current == shared_from_this()) {
+        // draw ambient skybox
+        underwater_skybox.draw(camera);
+
         std::stringstream score_stream;
         score_stream << "Team 1: " << state.current_points[0] << " * " << "Team 2: " << state.current_points[1];
         draw_message(score_stream.str(), 0.9f);

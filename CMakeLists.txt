@@ -48,7 +48,8 @@ set(CLIENT_FILES
         LobbyMode.cpp
         MeshBuffer.cpp
         draw_text.cpp
-        Sound.cpp)
+        Sound.cpp
+        Skybox.cpp)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(CLIENT_FILES ${CLIENT_FILES} gl_shims.cpp)
