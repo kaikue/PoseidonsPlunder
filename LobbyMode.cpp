@@ -117,8 +117,8 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 
 	std::random_device rd;
 	gen = std::mt19937(rd());
-	dist_name_first = std::uniform_int_distribution<uint32_t>(0, names_first.size() - 1);
-	dist_name_second = std::uniform_int_distribution<uint32_t>(0, names_second.size() - 1);
+	dist_name_first = std::uniform_int_distribution<uint32_t>(0, static_cast<uint32_t>(names_first.size()) - 1);
+	dist_name_second = std::uniform_int_distribution<uint32_t>(0, static_cast<uint32_t>(names_second.size()) - 1);
 
 	std::string nick = get_nickname();
 	strcpy(nickname, nick.c_str());

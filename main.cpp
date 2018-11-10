@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
 
 		{ //(3) call the current mode's "draw" function to produce output:
 			//clear the depth+color buffers and set some default state:
-			glClearColor(0.235, 0.4, 0.47, 0.0);
+			glClearColor(static_cast<GLfloat>(0.235), static_cast<GLfloat>(0.4), static_cast<GLfloat>(0.47), static_cast<GLfloat>(0.0));
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 			glEnable(GL_BLEND);

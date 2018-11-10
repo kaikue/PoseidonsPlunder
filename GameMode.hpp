@@ -1,5 +1,5 @@
 #pragma once
-
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE
 #include "Mode.hpp"
 
 #include "MeshBuffer.hpp"
@@ -9,6 +9,7 @@
 #include "Scene.hpp"
 #include "Skybox.hpp"
 
+#include <math.h>
 #include <SDL.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>

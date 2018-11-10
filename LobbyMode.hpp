@@ -1,5 +1,5 @@
 #pragma once
-
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE
 #include "Mode.hpp"
 #include "Connection.hpp"
 #include "GameState.hpp"

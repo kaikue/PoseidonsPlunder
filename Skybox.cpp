@@ -13,6 +13,14 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif // M_PI
+
+#ifndef M_PI_2
+#define M_PI_2 (M_PI / 2.0)
+#endif // M_PI_2
+
 static const GLfloat skyboxVertices[108] = {
     // Positions
     -1.0f, 1.0f,  -1.0f, -1.0f, -1.0f, -1.0f, 1.0f,  -1.0f, -1.0f,
@@ -125,12 +133,12 @@ void Skybox::draw(Scene::Camera const *camera)
     glDepthFunc(GL_LEQUAL);  // Change depth function so depth test passes when
     // values are equal to depth buffer's content
     glUseProgram(skybox_program->program);
-    glm::mat4 world_to_camera =
-        glm::mat4(glm::mat3(camera->transform->make_world_to_local()));  // Remove any translation
+    glm::quat world_to_camera =
+        glm::quat(glm::mat3(camera->transform->make_world_to_local()));  // Remove any translation
     // component of the view
     // matrix
 
-    glm::mat4 world_to_clip = camera->make_projection() * glm::rotate(world_to_camera, float(M_PI_2), glm::vec3(1, 0, 0));
+    glm::mat4 world_to_clip = camera->make_projection() * glm::mat4(glm::rotate(world_to_camera, (float)M_PI/2.0f, glm::vec3(1, 0, 0)));
 
     glUniformMatrix4fv(skybox_program->object_to_clip_mat4, 1, GL_FALSE, glm::value_ptr(world_to_clip));
 

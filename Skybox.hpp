@@ -7,6 +7,8 @@
 
 #include "GL.hpp"
 #include "Scene.hpp"
+#include <glm/glm.hpp>
+#include <math.h>
 #include <iostream>
 
 GLuint load_cube_map(std::string const &file_prefix);
