@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 	struct {
 		//TODO: this is where you set the title and size of your game window
 		std::string title = "Poseidon's Plunder";
-		glm::uvec2 size = glm::uvec2(800, 600);
+		glm::uvec2 size = glm::uvec2(1200, 800);
 	} config;
 
 	//----- start connection to server ----

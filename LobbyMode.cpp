@@ -90,10 +90,20 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 
 	choices.emplace_back("* LOBBY *");
 	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
+	choices.emplace_back("");
 	choices.emplace_back("SWITCH TEAM", [this]()
 	{
 		switch_team();
 	});
+	choices.emplace_back("");
 	choices.emplace_back("RANDOMIZE NAME", [this]()
 	{
 		change_nickname();
@@ -111,7 +121,7 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 		Mode::set_current(nullptr);
 	});*/
 
-	selected = 2;
+	selected = 15;
 
 	names_first = read_file(data_path("names_first.txt"));
 	names_second = read_file(data_path("names_second.txt"));
@@ -121,7 +131,7 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 	dist_name_first = std::uniform_int_distribution<uint32_t>(0, static_cast<uint32_t>(names_first.size()) - 1);
 	dist_name_second = std::uniform_int_distribution<uint32_t>(0, static_cast<uint32_t>(names_second.size()) - 1);
 
-	nickname = get_nickname(); //"placeholder name";
+	nickname = get_nickname();
 	std::cout << "My name is " << nickname << std::endl;
 
 	//TODO: assign starting team based on which team is smaller?
@@ -239,7 +249,6 @@ void LobbyMode::poll_server() {
 						memcpy(&player_count, c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
 						memcpy(&player_id, c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(int));
 						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 2 * sizeof(int));
-						std::cout << "Player count " << player_count << std::endl;
 					}
 				}
 				else if (c->recv_buffer[0] == 't') {
@@ -270,6 +279,60 @@ void LobbyMode::poll_server() {
 			}
 		}
 	}, 0.01);
+}
+
+void draw_item(std::string label, float x_offset, float y, float height, glm::mat4 projection, bool is_selected = false, float select_bounce = 0.0f) {
+
+	//character width and spacing helpers:
+	// (...in terms of the menu font's default 3-unit height)
+	auto width = [](char a) {
+		if (a == 'I' || a == 'i') return 1.0f;
+		else if (a == 'L' || a == 'l') return 2.0f;
+		else if (a == 'M' || a == 'm' || a == 'W' || a == 'w') return 4.0f;
+		else return 3.0f;
+	};
+	auto spacing = [](char a, char b) {
+		return 1.0f;
+	};
+
+	float total_width = 0.0f;
+	for (uint32_t i = 0; i < label.size(); ++i) {
+		if (i > 0) total_width += spacing(label[i - 1], label[i]);
+		total_width += width(label[i]);
+	}
+	if (is_selected) {
+		total_width += 2.0f * select_bounce;
+	}
+
+	float x = -0.5f * total_width + x_offset;
+	for (uint32_t i = 0; i < label.size(); ++i) {
+		if (i > 0) x += spacing(label[i - 1], label[i]);
+		if (is_selected && (i == 1 || i + 1 == label.size())) {
+			x += select_bounce;
+		}
+
+		if (label[i] != ' ') {
+			float s = height * (1.0f / 3.0f);
+			glm::mat4 mvp = projection * glm::mat4(
+				glm::vec4(s, 0.0f, 0.0f, 0.0f),
+				glm::vec4(0.0f, s, 0.0f, 0.0f),
+				glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
+				glm::vec4(s * x, y, 0.0f, 1.0f)
+			);
+			glUniformMatrix4fv(l_menu_program_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+			glUniform3f(l_menu_program_color, 1.0f, 1.0f, 1.0f);
+
+			MeshBuffer::Mesh const &mesh = l_menu_meshes->lookup(label.substr(i, 1));
+			glDrawArrays(GL_TRIANGLES, mesh.start, mesh.count);
+		}
+
+		x += width(label[i]);
+	}
+}
+
+float x_offset_from_team(int team) {
+	float amt = (float)team / (GameState::num_teams - 1); //0 to 1
+	return amt - 0.5f;
 }
 
 void LobbyMode::draw(glm::uvec2 const &drawable_size) {
@@ -308,19 +371,7 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 	glUseProgram(*l_menu_program);
 	glBindVertexArray(*l_menu_binding);
 
-	//character width and spacing helpers:
-	// (...in terms of the menu font's default 3-unit height)
-	auto width = [](char a) {
-		if (a == 'I') return 1.0f;
-		else if (a == 'L') return 2.0f;
-		else if (a == 'M' || a == 'W') return 4.0f;
-		else return 3.0f;
-	};
-	auto spacing = [](char a, char b) {
-		return 1.0f;
-	};
-
-	float select_bounce = std::abs(std::sin(bounce * 3.1515926f * 2.0f));
+	float select_bounce = std::abs(std::sin(bounce * 3.1415926f * 2.0f));
 
 	float y = 0.5f * total_height;
 	for (auto const &choice : choices) {
@@ -334,54 +385,50 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 			label = "*" + label + "*";
 		}
 
-		float total_width = 0.0f;
-		for (uint32_t i = 0; i < label.size(); ++i) {
-			if (i > 0) total_width += spacing(label[i-1], label[i]);
-			total_width += width(label[i]);
-		}
-		if (is_selected) {
-			total_width += 2.0f * select_bounce;
-		}
-
-		float x = -0.5f * total_width;
-		for (uint32_t i = 0; i < label.size(); ++i) {
-			if (i > 0) x += spacing(label[i-1], label[i]);
-			if (is_selected && (i == 1 || i + 1 == label.size())) {
-				x += select_bounce;
-			}
-
-			if (label[i] != ' ') {
-				float s = choice.height * (1.0f / 3.0f);
-				glm::mat4 mvp = projection * glm::mat4(
-					glm::vec4(s, 0.0f, 0.0f, 0.0f),
-					glm::vec4(0.0f, s, 0.0f, 0.0f),
-					glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
-					glm::vec4(s * x, y, 0.0f, 1.0f)
-				);
-				glUniformMatrix4fv(l_menu_program_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
-				glUniform3f(l_menu_program_color, 1.0f, 1.0f, 1.0f);
-
-				MeshBuffer::Mesh const &mesh = l_menu_meshes->lookup(label.substr(i,1));
-				glDrawArrays(GL_TRIANGLES, mesh.start, mesh.count);
-			}
-
-			x += width(label[i]);
-		}
+		draw_item(label, 0, y, choice.height, projection, is_selected, select_bounce);
 
 		y -= choice.padding;
 	}
 
-	//TODO draw team nicknames in columns, and our own above the "randomize name" button
+	//draw team nicknames in columns
 	{
-		for (int i = 0; i < player_count; i++) {
-			std::string nickname = std::string(nicknames[i]);
-			glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f); //TODO: GameMode::team_colors[player_teams[i]];
-
+		std::vector<float> team_ys;
+		for (int t = 0; t < GameState::num_teams; t++) {
 			float height = 0.1f;
-			float width = text_width(nickname, height);
-			draw_text(nickname, glm::vec2(-0.5f * width, y), height, color);
-			draw_text(nickname, glm::vec2(-0.5f * width, y + 0.01f), height, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+			draw_item("TEAM " + std::to_string(t + 1), x_offset_from_team(t) * 40, 0.6f, height, projection); //TODO: color
+			team_ys.push_back(0.59f);
 		}
+
+		for (int i = 0; i < player_count; i++) {
+			std::string nickname = nicknames[i];
+			//trim trailing whitespace
+			size_t last = nickname.find_last_not_of(' ');
+			nickname = nickname.substr(0, (last + 1));
+
+			//glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); //TODO: GameMode::team_colors[player_teams[i]];
+
+			float height = 0.07f;
+			float padding = 0.01f;
+
+			int team = player_teams[i];
+			team_ys[team] -= padding;
+			team_ys[team] -= height;
+			draw_item(nickname, x_offset_from_team(team) * 60, team_ys[team], height, projection); //TODO: color
+			team_ys[team] -= padding;
+		}
+	}
+
+	//draw our own nickname
+	{
+		std::string my_nickname = nickname;
+		//trim trailing whitespace
+		size_t last = my_nickname.find_last_not_of(' ');
+		my_nickname = my_nickname.substr(0, (last + 1));
+
+		//glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); //TODO: GameMode::team_colors[player_teams[i]];
+
+		float height = 0.1f;
+		draw_item("Name: " + my_nickname, 0, -0.59f, height, projection); //TODO: color
 	}
 
 	glEnable(GL_DEPTH_TEST);
