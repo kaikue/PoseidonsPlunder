@@ -27,6 +27,10 @@
 #include <type_traits>
 #include <sstream>
 
+glm::vec3 lerp(glm::vec3 start, glm::vec3 end, float t) {
+	return (1 - t) * start + t * end;
+}
+
 Load<MeshBuffer> meshes(LoadTagDefault, []()
 {
     return new MeshBuffer(data_path("test_level_complex.pnc"));
@@ -444,17 +448,23 @@ void GameMode::update(float elapsed) {
 
     // only process movement controls if player is not paralyzed
     if (!get_own_player().is_shot) {
-        float amt;
+        float spd;
         if (state.treasures[0].held_by == player_id || state.treasures[1].held_by == player_id) {
-            amt = GameState::slowed_player_speed * elapsed;
+            spd = GameState::slowed_player_speed;
         } else {
-            amt = GameState::default_player_speed * elapsed;
+            spd = GameState::default_player_speed;
         }
 
-        if (controls.right) players_transform.at(player_id)->position += amt * directions[0];
-        if (controls.left) players_transform.at(player_id)->position -= amt * directions[0];
-        if (controls.back) players_transform.at(player_id)->position += amt * directions[2];
-        if (controls.fwd) players_transform.at(player_id)->position -= amt * directions[2];
+		glm::vec3 goalVel = glm::vec3(0, 0, 0);
+
+        if (controls.right) goalVel += spd * directions[0];
+        if (controls.left) goalVel -= spd * directions[0];
+        if (controls.back) goalVel += spd * directions[2];
+        if (controls.fwd) goalVel -= spd * directions[2];
+
+		vel = lerp(vel, goalVel, FRICTION * elapsed);
+
+		players_transform.at(player_id)->position += vel * elapsed;
     }
 
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;
