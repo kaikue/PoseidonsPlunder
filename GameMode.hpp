@@ -61,6 +61,9 @@ struct GameMode: public Mode
         bool grab = false;
     } controls;
 
+	glm::vec3 vel = glm::vec3(0, 0, 0);
+	const float FRICTION = 2.5f; //how quickly the player starts/stops moving- higher value = more precise movement
+
     bool mouse_captured = false;
 
     uint32_t player_id;
