@@ -255,11 +255,14 @@ void LobbyMode::poll_server() {
 							memcpy(&player_team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
 							player_teams.push_back(player_team);
 							//char nick[Player::NICKNAME_LENGTH];// = "placeholder name";
-							//std::string nick(c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int) + Player::NICKNAME_LENGTH * sizeof(char));
+							std::string nick(c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int) + Player::NICKNAME_LENGTH * sizeof(char));
 							//std::cout << "received nickname " << nick << std::endl;
 							//nick.resize(Player::NICKNAME_LENGTH);
-							memcpy(&nicknames[i][0], c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), Player::NICKNAME_LENGTH * sizeof(char));
-							std::cout << "received nickname " << nicknames[i] << std::endl;
+							nicknames[i] = nick;
+							//memcpy(&nicknames[i][0], c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), Player::NICKNAME_LENGTH * sizeof(char));
+							std::cout << "received nickname " << nicknames[i] << "." << std::endl;
+							std::cout << "nick is " << nick << "." << std::endl;
+
 							//nicknames[i] = nick;
 						}
 						std::cout << "done updating nicknames" << std::endl;
