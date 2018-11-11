@@ -20,7 +20,7 @@
 
 struct GameMode: public Mode
 {
-    GameMode(Client &client_, int player_id, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames);
+    GameMode(Client &client_, int player_id, int player_count, std::vector<int> player_teams, std::vector<std::string> nicknames);
     virtual ~GameMode();
 
     //handle_event is called when new mouse or keyboard events are received:
@@ -45,7 +45,7 @@ struct GameMode: public Mode
 
     void show_game_over_menu();
 
-    void spawn_player(uint32_t id, int team, char nickname[Player::NICKNAME_LENGTH]);
+    void spawn_player(uint32_t id, int team, std::string nickname);
 
     inline Player &get_own_player();
 
@@ -71,7 +71,7 @@ struct GameMode: public Mode
     std::unordered_map<uint32_t, Scene::Transform *> guns_transform;
     std::unordered_map<uint32_t, Scene::Transform *> harpoons_transform;
 
-    glm::vec4 team_colors[GameState::num_teams] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
+	glm::vec4 team_colors[GameState::num_teams] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
     float azimuth, elevation;
 
     Skybox underwater_skybox;

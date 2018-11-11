@@ -1,6 +1,7 @@
 #include "LobbyMode.hpp"
 #include "GameState.hpp"
 #include "GameMode.hpp"
+#include "draw_text.hpp"
 
 #include "Load.hpp"
 #include "compile_program.hpp"
@@ -120,17 +121,20 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 	dist_name_first = std::uniform_int_distribution<uint32_t>(0, static_cast<uint32_t>(names_first.size()) - 1);
 	dist_name_second = std::uniform_int_distribution<uint32_t>(0, static_cast<uint32_t>(names_second.size()) - 1);
 
-	std::string nick = get_nickname();
-	strcpy(nickname, nick.c_str());
+	nickname = get_nickname(); //"placeholder name";
+	std::cout << "My name is " << nickname << std::endl;
 
 	//TODO: assign starting team based on which team is smaller?
+
+	send_lobby_info(&client.connection);
 }
 
 void LobbyMode::send_lobby_info(Connection *c) {
 	if (c) {
 		c->send('n'); //team and name
 		c->send(team);
-		c->send_raw(nickname, Player::NICKNAME_LENGTH); //NICKNAME_LENGTH is constant, nickname should be padded if necessary
+		//c->send(nickname); //NICKNAME_LENGTH is constant, nickname should be padded if necessary
+		c->send_raw(nickname.c_str(), Player::NICKNAME_LENGTH); //each player ID's nickname
 	}
 }
 
@@ -154,13 +158,11 @@ std::string LobbyMode::get_nickname() {
 	std::string second = names_second[second_line];
 	std::string name = first + second;
 	name.resize(Player::NICKNAME_LENGTH, ' ');
-	std::cout << name << std::endl;
 	return name;
 }
 
 void LobbyMode::change_nickname() {
-	std::string nick = get_nickname();
-	strcpy(nickname, nick.c_str());
+	nickname = get_nickname();
 
 	if (client.connection) {
 		send_lobby_info(&client.connection);
@@ -246,14 +248,21 @@ void LobbyMode::poll_server() {
 						return; //wait for more data
 					}
 					else {
+						std::cout << "Updating nicknames" << std::endl;
+						nicknames.resize(player_count);
 						for (int i = 0; i < player_count; i++) {
 							int player_team;
 							memcpy(&player_team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
 							player_teams.push_back(player_team);
-							char nickname[Player::NICKNAME_LENGTH];
-							memcpy(&nickname, c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), Player::NICKNAME_LENGTH * sizeof(char));
-							nicknames.push_back(nickname);
+							//char nick[Player::NICKNAME_LENGTH];// = "placeholder name";
+							//std::string nick(c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int) + Player::NICKNAME_LENGTH * sizeof(char));
+							//std::cout << "received nickname " << nick << std::endl;
+							//nick.resize(Player::NICKNAME_LENGTH);
+							memcpy(&nicknames[i][0], c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), Player::NICKNAME_LENGTH * sizeof(char));
+							std::cout << "received nickname " << nicknames[i] << std::endl;
+							//nicknames[i] = nick;
 						}
+						std::cout << "done updating nicknames" << std::endl;
 						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)));
 					}
 				}
@@ -365,6 +374,21 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 		}
 
 		y -= choice.padding;
+	}
+
+	std::cout << "==draw==" << std::endl;
+	//draw team nicknames
+	{
+		for (int i = 0; i < player_count; i++) {
+			std::string nickname = std::string(nicknames[i]);
+			glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f); //TODO: GameMode::team_colors[player_teams[i]];
+
+			std::cout << "nick " << i << ": " << nickname << std::endl;
+			float height = 0.06f;
+			float width = text_width(nickname, height);
+			draw_text(nickname, glm::vec2(-0.5f * width, y), height, color);
+			draw_text(nickname, glm::vec2(-0.5f * width, y + 0.01f), height, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+		}
 	}
 
 	glEnable(GL_DEPTH_TEST);

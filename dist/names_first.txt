@@ -4,6 +4,8 @@ team
 great
 big
 game
+games
+gamer
 normal
 real
 cool
@@ -14,3 +16,5 @@ nice
 scuba
 water
 treasure
+smart
+awesome

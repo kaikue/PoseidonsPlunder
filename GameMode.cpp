@@ -149,12 +149,12 @@ Player &GameMode::get_own_player()
 }
 
 
-void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAME_LENGTH])
+void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
 {
     state.players[id] = Player();
     state.harpoons[id] = Harpoon();
 	state.players[id].team = team;
-	memcpy(&state.players[id].nickname, nickname, Player::NICKNAME_LENGTH * sizeof(char));
+	memcpy(&state.players[id].nickname, &nickname, Player::NICKNAME_LENGTH * sizeof(char));
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
     players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -207,7 +207,7 @@ void GameMode::spawn_player(uint32_t id, int team, char nickname[Player::NICKNAM
     }
 }
 
-GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<char*> nicknames) : underwater_skybox("textures/underwater_cube_map"), client(client_)
+GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<std::string> nicknames) : underwater_skybox("textures/underwater_cube_map"), client(client_)
 {
     player_id = pid;
 	state.player_count = player_count;

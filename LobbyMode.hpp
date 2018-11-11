@@ -36,11 +36,11 @@ struct LobbyMode : public Mode {
 
 	int team = 0;
 
-	char nickname[Player::NICKNAME_LENGTH];
+	std::string nickname;
 	int player_id = 0;
 	int player_count = 0;
 	std::vector<int> player_teams;
-	std::vector<char*> nicknames;
+	std::vector<std::string> nicknames;
 	std::mt19937 gen;
 	std::uniform_int_distribution<uint32_t> dist_name_first, dist_name_second;
 	std::vector<std::string> names_first;

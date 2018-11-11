@@ -39,7 +39,7 @@ struct Player
 
     static constexpr int NICKNAME_LENGTH = 16;
 
-    char nickname[NICKNAME_LENGTH];
+    std::string nickname;
 };
 
 struct Harpoon

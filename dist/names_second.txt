@@ -24,3 +24,4 @@ genius
 winner
 hero
 legend
+knight
