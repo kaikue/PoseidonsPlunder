@@ -21,7 +21,6 @@ void send_lobby_update(Connection *c, GameState *state, int player_id) {
 		c->send('t'); //team info
 		for (int i = 0; i < state->player_count; i++) {
 			c->send(state->players[i].team); //each player ID's team
-			std::cout << "Sending nickname " << state->players[i].nickname << std::endl;
 			c->send_raw(state->players[i].nickname.c_str(), Player::NICKNAME_LENGTH); //each player ID's nickname
 		}
 	}
@@ -157,7 +156,6 @@ int main(int argc, char **argv) {
 						  //player_data->nickname = nick;
                           memcpy(&player_data->nickname[0], c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(char) * Player::NICKNAME_LENGTH);
                           c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(int) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
-						  std::cout << "nick: " << player_data->nickname << std::endl;
                           update_lobby(&state, &player_ledger);
                       }
                   }

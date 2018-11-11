@@ -248,24 +248,16 @@ void LobbyMode::poll_server() {
 						return; //wait for more data
 					}
 					else {
-						std::cout << "Updating nicknames" << std::endl;
 						nicknames.resize(player_count);
 						for (int i = 0; i < player_count; i++) {
 							int player_team;
 							memcpy(&player_team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
 							player_teams.push_back(player_team);
-							//char nick[Player::NICKNAME_LENGTH];// = "placeholder name";
-							std::string nick(c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int) + Player::NICKNAME_LENGTH * sizeof(char));
-							//std::cout << "received nickname " << nick << std::endl;
-							//nick.resize(Player::NICKNAME_LENGTH);
+							char *start = c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int);
+							char *end = start + Player::NICKNAME_LENGTH * sizeof(char);
+							std::string nick(start, end);
 							nicknames[i] = nick;
-							//memcpy(&nicknames[i][0], c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int), Player::NICKNAME_LENGTH * sizeof(char));
-							std::cout << "received nickname " << nicknames[i] << "." << std::endl;
-							std::cout << "nick is " << nick << "." << std::endl;
-
-							//nicknames[i] = nick;
 						}
-						std::cout << "done updating nicknames" << std::endl;
 						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)));
 					}
 				}
@@ -379,15 +371,13 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 		y -= choice.padding;
 	}
 
-	std::cout << "==draw==" << std::endl;
-	//draw team nicknames
+	//TODO draw team nicknames in columns, and our own above the "randomize name" button
 	{
 		for (int i = 0; i < player_count; i++) {
 			std::string nickname = std::string(nicknames[i]);
 			glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f); //TODO: GameMode::team_colors[player_teams[i]];
 
-			std::cout << "nick " << i << ": " << nickname << std::endl;
-			float height = 0.06f;
+			float height = 0.1f;
 			float width = text_width(nickname, height);
 			draw_text(nickname, glm::vec2(-0.5f * width, y), height, color);
 			draw_text(nickname, glm::vec2(-0.5f * width, y + 0.01f), height, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
