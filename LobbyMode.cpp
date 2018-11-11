@@ -257,11 +257,12 @@ void LobbyMode::poll_server() {
 						return; //wait for more data
 					}
 					else {
+						player_teams.resize(player_count);
 						nicknames.resize(player_count);
 						for (int i = 0; i < player_count; i++) {
 							int player_team;
-							memcpy(&player_team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
-							player_teams.push_back(player_team);
+							memcpy(&player_team, c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)), sizeof(int));
+							player_teams[i] = player_team;
 							char *start = c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)) + sizeof(int);
 							char *end = start + Player::NICKNAME_LENGTH * sizeof(char);
 							std::string nick(start, end);
@@ -398,7 +399,7 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 			draw_item("TEAM " + std::to_string(t + 1), x_offset_from_team(t) * 40, 0.6f, height, projection); //TODO: color
 			team_ys.push_back(0.59f);
 		}
-
+		
 		for (int i = 0; i < player_count; i++) {
 			std::string nickname = nicknames[i];
 			//trim trailing whitespace
@@ -406,7 +407,6 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 			nickname = nickname.substr(0, (last + 1));
 
 			//glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); //TODO: GameMode::team_colors[player_teams[i]];
-
 			float height = 0.07f;
 			float padding = 0.01f;
 
@@ -417,7 +417,6 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 			team_ys[team] -= padding;
 		}
 	}
-
 	//draw our own nickname
 	{
 		std::string my_nickname = nickname;
