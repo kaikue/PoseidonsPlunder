@@ -143,11 +143,12 @@ Load<Scene> scene(LoadTagDefault, []()
     return ret;
 });
 
+const glm::vec4 GameMode::team_colors[GameState::num_teams] = { {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} };
+
 Player &GameMode::get_own_player()
 {
     return state.players.at(player_id);
 }
-
 
 void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
 {

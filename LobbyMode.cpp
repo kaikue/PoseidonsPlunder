@@ -35,10 +35,10 @@ Load< GLuint > l_menu_program(LoadTagInit, [](){
 		"}\n"
 	,
 		"#version 330\n"
-		"uniform vec3 color;\n"
+		"uniform vec4 color;\n"
 		"out vec4 fragColor;\n"
 		"void main() {\n"
-		"	fragColor = vec4(color, 1.0);\n"
+		"	fragColor = color;\n"
 		"}\n"
 	));
 
@@ -282,7 +282,7 @@ void LobbyMode::poll_server() {
 	}, 0.01);
 }
 
-void draw_item(std::string label, float x_offset, float y, float height, glm::mat4 projection, bool is_selected = false, float select_bounce = 0.0f) {
+void draw_item(std::string label, float x_offset, float y, float height, glm::vec4 color, glm::mat4 projection, bool is_selected = false, float select_bounce = 0.0f) {
 
 	//character width and spacing helpers:
 	// (...in terms of the menu font's default 3-unit height)
@@ -321,7 +321,7 @@ void draw_item(std::string label, float x_offset, float y, float height, glm::ma
 				glm::vec4(s * x, y, 0.0f, 1.0f)
 			);
 			glUniformMatrix4fv(l_menu_program_mvp, 1, GL_FALSE, glm::value_ptr(mvp));
-			glUniform3f(l_menu_program_color, 1.0f, 1.0f, 1.0f);
+			glUniform4fv(l_menu_program_color, 1, glm::value_ptr(color));
 
 			MeshBuffer::Mesh const &mesh = l_menu_meshes->lookup(label.substr(i, 1));
 			glDrawArrays(GL_TRIANGLES, mesh.start, mesh.count);
@@ -373,6 +373,7 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 	glBindVertexArray(*l_menu_binding);
 
 	float select_bounce = std::abs(std::sin(bounce * 3.1415926f * 2.0f));
+	glm::vec4 white = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 	float y = 0.5f * total_height;
 	for (auto const &choice : choices) {
@@ -386,7 +387,7 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 			label = "*" + label + "*";
 		}
 
-		draw_item(label, 0, y, choice.height, projection, is_selected, select_bounce);
+		draw_item(label, 0, y, choice.height, white, projection, is_selected, select_bounce);
 
 		y -= choice.padding;
 	}
@@ -396,7 +397,8 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 		std::vector<float> team_ys;
 		for (int t = 0; t < GameState::num_teams; t++) {
 			float height = 0.1f;
-			draw_item("TEAM " + std::to_string(t + 1), x_offset_from_team(t) * 40, 0.6f, height, projection); //TODO: color
+			glm::vec4 color = GameMode::team_colors[t];
+			draw_item("TEAM " + std::to_string(t + 1), x_offset_from_team(t) * 40, 0.6f, height, color, projection);
 			team_ys.push_back(0.59f);
 		}
 		
@@ -406,14 +408,14 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 			size_t last = nickname.find_last_not_of(' ');
 			nickname = nickname.substr(0, (last + 1));
 
-			//glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); //TODO: GameMode::team_colors[player_teams[i]];
 			float height = 0.07f;
 			float padding = 0.01f;
 
 			int team = player_teams[i];
+			glm::vec4 color = GameMode::team_colors[team];
 			team_ys[team] -= padding;
 			team_ys[team] -= height;
-			draw_item(nickname, x_offset_from_team(team) * 60, team_ys[team], height, projection); //TODO: color
+			draw_item(nickname, x_offset_from_team(team) * 60, team_ys[team], height, color, projection);
 			team_ys[team] -= padding;
 		}
 	}
@@ -424,10 +426,10 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 		size_t last = my_nickname.find_last_not_of(' ');
 		my_nickname = my_nickname.substr(0, (last + 1));
 
-		//glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); //TODO: GameMode::team_colors[player_teams[i]];
+		glm::vec4 color = GameMode::team_colors[team];
 
 		float height = 0.1f;
-		draw_item("Name: " + my_nickname, 0, -0.59f, height, projection); //TODO: color
+		draw_item("Name: " + my_nickname, 0, -0.59f, height, color, projection);
 	}
 
 	glEnable(GL_DEPTH_TEST);
