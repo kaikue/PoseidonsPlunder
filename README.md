@@ -26,10 +26,8 @@ Server movement validation:
 
 ## TODO
 - Lobby
-	- actually show teams & nicknames
 	- auto-assign to smaller team when joining?
 	- add ability to cancel "ok to start"
-- remove cout's
 - make everything use Translation struct and sizeof()
 	- send harpoon rotations
 	- static_assert its size somewhere
