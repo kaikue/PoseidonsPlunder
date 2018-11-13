@@ -84,6 +84,27 @@ void update_lobby(GameState *state, std::unordered_map< Connection *, int > *pla
 	}
 }
 
+bool check_start(GameState *state, std::unordered_map< Connection *, int > *player_ledger, std::unordered_map< int, bool > *ready_to_start) {
+	if (ready_to_start->size() == state->player_count) {
+		//make sure everyone is ready
+		for (auto iter = ready_to_start->begin(); iter != ready_to_start->end(); iter++) {
+			bool ready = iter->second;
+			if (!ready) {
+				return false;
+			}
+		}
+
+		//start game
+		for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
+			send_begin(iter->first, state, iter->second);
+		}
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
 void update_server(GameState *state, std::unordered_map< Connection *, int > *player_ledger, float time) {
   state->update(time);
   //send state to all clients
@@ -106,7 +127,7 @@ int main(int argc, char **argv) {
 
   std::unordered_map< Connection *, int > player_ledger;
 
-  std::unordered_map< int, int > ready_to_start;
+  std::unordered_map< int, bool > ready_to_start;
 
   bool playing = false;
 
@@ -134,16 +155,17 @@ int main(int argc, char **argv) {
 
               while (!(c->recv_buffer.empty())) {
                   if (c->recv_buffer[0] == 'k') {
-                      std::cout << "OK to start" << std::endl;
-                      c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1);
-                      ready_to_start[player_id] = 1;
-                      if (ready_to_start.size() == state.player_count) { //TODO: and all the values are set to 1
-                          //start game
-                          for (std::pair<Connection*, int> p : player_ledger) {
-                              send_begin(p.first, &state, p.second);
-                          }
-                          playing = true;
-                      }
+					  if (c->recv_buffer.size() < 1 + sizeof(bool)) {
+						  return; //wait for more data
+					  }
+					  else {
+						  std::cout << "Ready update" << std::endl;
+						  bool ready = false;
+						  memcpy(&ready, c->recv_buffer.data() + 1, sizeof(bool));
+						  ready_to_start[player_id] = ready;
+						  c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + sizeof(bool));
+						  playing = check_start(&state, &player_ledger, &ready_to_start);
+					  }
                   }
                   else if (c->recv_buffer[0] == 'n') {
                       if (c->recv_buffer.size() < 1 + 1 * sizeof(uint32_t) + 1 * sizeof(char) * Player::NICKNAME_LENGTH) {
@@ -152,8 +174,6 @@ int main(int argc, char **argv) {
                       else {
                           std::cout << "Nickname/team update" << std::endl;
                           memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
-						  //std::string nick(c->recv_buffer.data() + 1 + 1 * sizeof(int), c->recv_buffer.data() + 1 + 1 * sizeof(int) + sizeof(char) * Player::NICKNAME_LENGTH);
-						  //player_data->nickname = nick;
                           memcpy(&player_data->nickname[0], c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(char) * Player::NICKNAME_LENGTH);
                           c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(int) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
                           update_lobby(&state, &player_ledger);
@@ -167,7 +187,6 @@ int main(int argc, char **argv) {
                           memcpy(&player_data->position, c->recv_buffer.data() + 1, sizeof(glm::vec3));
                           memcpy(&player_data->velocity, c->recv_buffer.data() + 1 + 1 * sizeof(glm::vec3), sizeof(glm::vec3));
                           memcpy(&player_data->rotation, c->recv_buffer.data() + 1 + 2 * sizeof(glm::vec3), sizeof(glm::quat));
-
 
                           bool shot = false;
                           bool grabbed = false;

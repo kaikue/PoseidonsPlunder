@@ -113,7 +113,8 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 	choices.emplace_back("READY", [this]()
 	{
 		if (client.connection) {
-			send_start(&client.connection);
+			ready = !ready;
+			send_ready(&client.connection);
 		}
 	});
 
@@ -149,9 +150,10 @@ void LobbyMode::send_lobby_info(Connection *c) {
 	}
 }
 
-void LobbyMode::send_start(Connection *c) {
+void LobbyMode::send_ready(Connection *c) {
 	if (c) {
-		c->send('k'); //ok to start game
+		c->send('k'); //ready update
+		c->send(ready);
 	}
 }
 
@@ -402,7 +404,12 @@ void LobbyMode::draw(glm::uvec2 const &drawable_size) {
 			label = "*" + label + "*";
 		}
 
-		draw_item(label, 0, y, choice.height, white, projection, is_selected, select_bounce);
+		glm::vec4 color = white;
+		if (&choice == &choices[15]) {
+			glm::vec4 green = glm::vec4(0.3f, 1.0f, 0.3f, 1.0f);
+			color = ready ? green : white;
+		}
+		draw_item(label, 0, y, choice.height, color, projection, is_selected, select_bounce);
 
 		y -= choice.padding;
 	}
