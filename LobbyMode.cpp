@@ -101,7 +101,8 @@ LobbyMode::LobbyMode(Client &client_) : client(client_) {
 	choices.emplace_back("");
 	choices.emplace_back("SWITCH TEAM", [this]()
 	{
-		switch_team();
+		int t = (team + 1) % GameState::num_teams;
+		switch_team(t);
 	});
 	choices.emplace_back("");
 	choices.emplace_back("RANDOMIZE NAME", [this]()
@@ -154,8 +155,8 @@ void LobbyMode::send_start(Connection *c) {
 	}
 }
 
-void LobbyMode::switch_team() {
-	team = 1 - team;
+void LobbyMode::switch_team(int new_team) {
+	team = new_team;
 	if (client.connection) {
 		send_lobby_info(&client.connection);
 	}
@@ -259,6 +260,7 @@ void LobbyMode::poll_server() {
 					else {
 						player_teams.resize(player_count);
 						nicknames.resize(player_count);
+						int team_sizes[GameState::num_teams] = { };
 						for (int i = 0; i < player_count; i++) {
 							int player_team;
 							memcpy(&player_team, c->recv_buffer.data() + 1 + i * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)), sizeof(int));
@@ -267,6 +269,19 @@ void LobbyMode::poll_server() {
 							char *end = start + Player::NICKNAME_LENGTH * sizeof(char);
 							std::string nick(start, end);
 							nicknames[i] = nick;
+							team_sizes[player_team]++;
+						}
+
+						if (!checked_teams) {
+							//switch to team with lowest size
+							int smallest_team = 0;
+							for (int i = 0; i < GameState::num_teams; i++) {
+								if (team_sizes[i] < team_sizes[smallest_team] - 1) {
+									smallest_team = i;
+								}
+							}
+							switch_team(smallest_team);
+							checked_teams = true;
 						}
 						c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + player_count * (Player::NICKNAME_LENGTH * sizeof(char) + sizeof(int)));
 					}

@@ -45,8 +45,9 @@ struct LobbyMode : public Mode {
 	std::uniform_int_distribution<uint32_t> dist_name_first, dist_name_second;
 	std::vector<std::string> names_first;
 	std::vector<std::string> names_second;
+	bool checked_teams = false;
 
-	void switch_team();
+	void switch_team(int new_team);
 
 	std::string get_nickname();
 
