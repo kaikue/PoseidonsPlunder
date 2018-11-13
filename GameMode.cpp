@@ -235,7 +235,7 @@ GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> 
     // OpenGL setup
     //set up light position + color:
     glUseProgram(vertex_color_program->program);
-    glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.81f, 0.81f, 0.76f)));
+    glUniform3fv(vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.05f, 0.81f, 0.91f)));
     glUniform3fv(vertex_color_program->sun_direction_vec3, 1,
                  glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
     glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.2, 0.2, 0.3)));
