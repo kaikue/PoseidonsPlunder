@@ -275,10 +275,12 @@ void LobbyMode::poll_server() {
 						}
 
 						if (!checked_teams) {
+							std::cout << "Team autobalance" << std::endl;
 							//switch to team with lowest size
 							int smallest_team = 0;
 							for (int i = 0; i < GameState::num_teams; i++) {
-								if (team_sizes[i] < team_sizes[smallest_team] - 1) {
+								std::cout << "Team " << i << " size " << team_sizes[i] << std::endl;
+								if (team_sizes[i] <= team_sizes[smallest_team] - 1) {
 									smallest_team = i;
 								}
 							}

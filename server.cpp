@@ -10,27 +10,31 @@
 
 #include <glm/gtx/string_cast.hpp>
 
+struct PlayerInfo {
+	bool ready = false;
+	int team = 0;
+	std::string nickname = "placeholder name";
+};
 
 //when in lobby:
-void send_lobby_update(Connection *c, GameState *state, int player_id) {
+void send_lobby_update(Connection *c, int player_id, int player_count, std::unordered_map< int, PlayerInfo * > *players_info) {
 	if (c) {
 		c->send('u'); //update- send number of players and that player's ID
-		c->send(state->player_count);
+		c->send(player_count);
 		c->send(player_id);
 
 		c->send('t'); //team info
-		for (int i = 0; i < state->player_count; i++) {
-			c->send(state->players[i].team); //each player ID's team
-			c->send_raw(state->players[i].nickname.c_str(), Player::NICKNAME_LENGTH); //each player ID's nickname
+		for (int i = 0; i < player_count; i++) {
+			c->send((*players_info)[i]->team); //each player ID's team
+			c->send_raw((*players_info)[i]->nickname.c_str(), Player::NICKNAME_LENGTH); //each player ID's nickname
 		}
 	}
 }
 
 //when starting game:
-void send_begin(Connection *c, GameState *state, int player_id) {
+void send_begin(Connection *c, int player_id) {
   if (c) {
-	std::cout << "Begin " << player_id << std::endl;
-    c->send('b'); //begin game- send number of players and that player's ID
+    c->send('b'); //begin game
   }
 }
 
@@ -77,18 +81,18 @@ void send_state(Connection *c, GameState *state, int player_id) {
   }
 }
 
-void update_lobby(GameState *state, std::unordered_map< Connection *, int > *player_ledger) {
+void update_lobby(std::unordered_map< Connection *, int > *player_ledger, int player_count, std::unordered_map< int, PlayerInfo * > *players_info) {
 	//send lobby state to all clients
 	for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
-		send_lobby_update(iter->first, state, iter->second);
+		send_lobby_update(iter->first, iter->second, player_count, players_info);
 	}
 }
 
-bool check_start(GameState *state, std::unordered_map< Connection *, int > *player_ledger, std::unordered_map< int, bool > *ready_to_start) {
-	if (ready_to_start->size() == state->player_count) {
+bool check_start(GameState *state, std::unordered_map< Connection *, int > *player_ledger, std::unordered_map< int, PlayerInfo * > *players_info, int player_count) {
+	if (players_info->size() == player_count) {
 		//make sure everyone is ready
-		for (auto iter = ready_to_start->begin(); iter != ready_to_start->end(); iter++) {
-			bool ready = iter->second;
+		for (auto iter = players_info->begin(); iter != players_info->end(); iter++) {
+			bool ready = iter->second->ready;
 			if (!ready) {
 				return false;
 			}
@@ -96,7 +100,13 @@ bool check_start(GameState *state, std::unordered_map< Connection *, int > *play
 
 		//start game
 		for (auto iter = player_ledger->begin(); iter != player_ledger->end(); iter++) {
-			send_begin(iter->first, state, iter->second);
+			int player_id = iter->second;
+			send_begin(iter->first, player_id);
+
+			PlayerInfo *player_info = (*players_info)[player_id];
+			int team = player_info->team;
+			std::string nickname = player_info->nickname;
+			state->add_player(player_id, team, nickname);
 		}
 		return true;
 	}
@@ -126,8 +136,8 @@ int main(int argc, char **argv) {
   GameState state;
 
   std::unordered_map< Connection *, int > player_ledger;
-
-  std::unordered_map< int, bool > ready_to_start;
+  std::unordered_map< int, PlayerInfo * > players_info;
+  int player_count = 0;
 
   bool playing = false;
 
@@ -138,10 +148,11 @@ int main(int argc, char **argv) {
 	  server.poll([&](Connection *c, Connection::Event evt) {
 		  if (evt == Connection::OnOpen) {
 			  std::cout << "Connection open" << std::endl;
-			  int player_id = state.player_count;
+			  int player_id = player_count;
 			  player_ledger.insert(std::make_pair(c, player_id));
-			  state.add_player(player_id, 0);
-			  update_lobby(&state, &player_ledger);
+			  players_info[player_id] = new PlayerInfo();
+			  update_lobby(&player_ledger, player_count, &players_info);
+			  player_count++;
 		  }
 		  else if (evt == Connection::OnClose) {
 			  std::cout << "Connection close" << std::endl;
@@ -151,7 +162,6 @@ int main(int argc, char **argv) {
 			  //        std::cout << "Connection receive" << std::endl;
 			  assert(evt == Connection::OnRecv);
 			  uint32_t player_id = player_ledger.find(c)->second; // get player ID corresponding to connection
-			  Player* player_data = &state.players.find(player_id)->second;
 
               while (!(c->recv_buffer.empty())) {
                   if (c->recv_buffer[0] == 'k') {
@@ -162,9 +172,9 @@ int main(int argc, char **argv) {
 						  std::cout << "Ready update" << std::endl;
 						  bool ready = false;
 						  memcpy(&ready, c->recv_buffer.data() + 1, sizeof(bool));
-						  ready_to_start[player_id] = ready;
+						  players_info[player_id]->ready = ready;
 						  c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + sizeof(bool));
-						  playing = check_start(&state, &player_ledger, &ready_to_start);
+						  playing = check_start(&state, &player_ledger, &players_info, player_count);
 					  }
                   }
                   else if (c->recv_buffer[0] == 'n') {
@@ -173,10 +183,10 @@ int main(int argc, char **argv) {
                       }
                       else {
                           std::cout << "Nickname/team update" << std::endl;
-                          memcpy(&player_data->team, c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
-                          memcpy(&player_data->nickname[0], c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(char) * Player::NICKNAME_LENGTH);
+                          memcpy(&players_info[player_id]->team, c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
+                          memcpy(&players_info[player_id]->nickname[0], c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(char) * Player::NICKNAME_LENGTH);
                           c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 1 * sizeof(int) + 1 * sizeof(char) * Player::NICKNAME_LENGTH);
-                          update_lobby(&state, &player_ledger);
+                          update_lobby(&player_ledger, player_count, &players_info);
                       }
                   }
                   else if (c->recv_buffer[0] == 'p') {
@@ -184,6 +194,7 @@ int main(int argc, char **argv) {
                           return; //wait for more data
                       }
                       else {
+						  Player* player_data = &state.players.find(player_id)->second;
                           memcpy(&player_data->position, c->recv_buffer.data() + 1, sizeof(glm::vec3));
                           memcpy(&player_data->velocity, c->recv_buffer.data() + 1 + 1 * sizeof(glm::vec3), sizeof(glm::vec3));
                           memcpy(&player_data->rotation, c->recv_buffer.data() + 1 + 2 * sizeof(glm::vec3), sizeof(glm::quat));
