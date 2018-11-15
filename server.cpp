@@ -151,8 +151,8 @@ int main(int argc, char **argv) {
 			  int player_id = player_count;
 			  player_ledger.insert(std::make_pair(c, player_id));
 			  players_info[player_id] = new PlayerInfo();
-			  update_lobby(&player_ledger, player_count, &players_info);
 			  player_count++;
+			  update_lobby(&player_ledger, player_count, &players_info);
 		  }
 		  else if (evt == Connection::OnClose) {
 			  std::cout << "Connection close" << std::endl;

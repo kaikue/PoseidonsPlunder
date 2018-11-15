@@ -158,6 +158,8 @@ void LobbyMode::send_ready(Connection *c) {
 }
 
 void LobbyMode::switch_team(int new_team) {
+	if (team == new_team) return;
+
 	team = new_team;
 	if (client.connection) {
 		send_lobby_info(&client.connection);
@@ -275,12 +277,10 @@ void LobbyMode::poll_server() {
 						}
 
 						if (!checked_teams) {
-							std::cout << "Team autobalance" << std::endl;
 							//switch to team with lowest size
 							int smallest_team = 0;
 							for (int i = 0; i < GameState::num_teams; i++) {
-								std::cout << "Team " << i << " size " << team_sizes[i] << std::endl;
-								if (team_sizes[i] <= team_sizes[smallest_team] - 1) {
+								if (team_sizes[i] < team_sizes[smallest_team] - 1) {
 									smallest_team = i;
 								}
 							}
