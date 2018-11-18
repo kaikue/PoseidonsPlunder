@@ -213,7 +213,7 @@ void GameState::add_player(uint32_t id, uint32_t team, std::string nickname)
     glm::quat rotation = team_spawns_rot[team];
 
     players[id] =
-        {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, 0, false, false, false, false, false, nickname};
+        {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, static_cast<int>(team), false, false, false, false, false, nickname};
 
     // add player collision mesh
     auto *player_object = new btCollisionObject();
@@ -488,7 +488,7 @@ void GameState::update(float time)
                 get_transform(player_pos, player_rot) * treasure_offset_to_player;
             auto treasure_pos_rot = get_pos_rot(treasure_to_world);
 
-            std::cout << "treasure world pos: " << glm::to_string(treasure_pos_rot.first) << std::endl;
+            std::cout << "treasure world pos: " << glm::to_string(treasure_pos_rot.first) << ", player pos: " << glm::to_string(player_pos) << std::endl;
 
             treasures[team].position = treasure_pos_rot.first;
             treasures[team].rotation = treasure_pos_rot.second;
