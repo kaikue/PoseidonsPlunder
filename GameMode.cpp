@@ -27,8 +27,9 @@
 #include <type_traits>
 #include <sstream>
 
-glm::vec3 lerp(glm::vec3 start, glm::vec3 end, float t) {
-	return (1 - t) * start + t * end;
+glm::vec3 lerp(glm::vec3 start, glm::vec3 end, float t)
+{
+    return (1 - t) * start + t * end;
 }
 
 Load<MeshBuffer> meshes(LoadTagDefault, []()
@@ -143,7 +144,7 @@ Load<Scene> scene(LoadTagDefault, []()
     return ret;
 });
 
-const glm::vec4 GameMode::team_colors[GameState::num_teams] = { {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f} };
+const glm::vec4 GameMode::team_colors[GameState::num_teams] = {{1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}};
 
 Player &GameMode::get_own_player()
 {
@@ -154,8 +155,8 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
 {
     state.players[id] = Player();
     state.harpoons[id] = Harpoon();
-	state.players[id].team = team;
-	memcpy(&state.players[id].nickname, &nickname, Player::NICKNAME_LENGTH * sizeof(char));
+    state.players[id].team = team;
+    memcpy(&state.players[id].nickname, &nickname, Player::NICKNAME_LENGTH * sizeof(char));
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
     players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -208,23 +209,27 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
     }
 }
 
-GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> player_teams, std::vector<std::string> nicknames) : underwater_skybox("textures/underwater_cube_map"), client(client_)
+GameMode::GameMode(Client &client_,
+                   int pid,
+                   int player_count,
+                   std::vector<int> player_teams,
+                   std::vector<std::string> nicknames)
+    : underwater_skybox("textures/underwater_cube_map"), client(client_)
 {
     player_id = pid;
-	state.player_count = player_count;
+    state.player_count = player_count;
 
-	spawn_player(player_id, player_teams[player_id], nicknames[player_id]); //spawn ourselves first
+    spawn_player(player_id, player_teams[player_id], nicknames[player_id]); //spawn ourselves first
     for (int i = 0; i < state.player_count; i++) {
-		if (i != player_id) {
-			spawn_player(i, player_teams[i], nicknames[i]);
-		}
+        if (i != player_id) {
+            spawn_player(i, player_teams[i], nicknames[i]);
+        }
     }
     {
         camera->transform->set_parent(players_transform.at(player_id));
         camera->transform->set_transform(state.camera_offset_to_player);
 
         // camera rotated according to game state demands
-        camera->transform->rotation *= get_own_player().rotation;
         elevation = glm::pitch(camera->transform->rotation);
         azimuth = glm::roll(camera->transform->rotation);
     }
@@ -243,10 +248,12 @@ GameMode::GameMode(Client &client_, int pid, int player_count, std::vector<int> 
     glUseProgram(0);
 }
 
-GameMode::~GameMode() {
+GameMode::~GameMode()
+{
 }
 
-bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
+bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
+{
     //ignore any keys that are the result of automatic key repeat:
     if (evt.type == SDL_KEYDOWN && evt.key.repeat) {
         return false;
@@ -302,16 +309,17 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
             azimuth -= yaw;
             elevation = glm::clamp(elevation - pitch, 0.0f, static_cast<float>(M_PI));
-
             /// Build a quaternion from euler angles (pitch, yaw, roll), in radians.
-            camera->transform->rotation = glm::quat(glm::vec3(elevation, 0.0f, azimuth));
+            players_transform.at(player_id)->rotation = glm::inverse(get_pos_rot(state.camera_offset_to_player).second)
+                * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
             return true;
         }
     }
     return false;
 }
 
-void GameMode::draw_message(std::string message, float y) {
+void GameMode::draw_message(std::string message, float y)
+{
     float height = 0.06f;
     float width = text_width(message, height);
     draw_text(message, glm::vec2(-0.5f * width, y), height, glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -319,7 +327,8 @@ void GameMode::draw_message(std::string message, float y) {
 }
 
 //when in game:
-void GameMode::send_action(Connection *c) {
+void GameMode::send_action(Connection *c)
+{
     static_assert(std::is_pod<glm::vec3>::value, "glm::vec3 must be tightly packed");
     static_assert(std::is_pod<glm::quat>::value, "glm::quat must be tightly packed");
 
@@ -342,102 +351,147 @@ void GameMode::send_action(Connection *c) {
     }
 }
 
-void GameMode::poll_server() {
+void GameMode::poll_server()
+{
     //poll server for current game state
-    client.poll([&](Connection *c, Connection::Event event) {
-        if (event == Connection::OnOpen) {
-            //probably won't get this.
-            std::cout << "Opened connection" << std::endl;
-        }
-        else if (event == Connection::OnClose) {
-            std::cerr << "Lost connection to server." << std::endl;
-        }
-        else {
-            while (!(c->recv_buffer.empty())) {
-                assert(event == Connection::OnRecv);
-                // game begins
-                if (c->recv_buffer[0] == 'b') {
-                    if (c->recv_buffer.size() < 1 + 2 * sizeof(int)) {
-                        return; //wait for more data
+    client.poll([&](Connection *c, Connection::Event event)
+                {
+                    if (event == Connection::OnOpen) {
+                        //probably won't get this.
+                        std::cout << "Opened connection" << std::endl;
+                    }
+                    else if (event == Connection::OnClose) {
+                        std::cerr << "Lost connection to server." << std::endl;
                     }
                     else {
-                        std::cout << "Enter the lobby." << std::endl;
-                        memcpy(&state.player_count, c->recv_buffer.data() + 1 + 0 * sizeof(int), sizeof(int));
-                        memcpy(&get_own_player().team, c->recv_buffer.data() + 1 + 1 * sizeof(int), sizeof(int));
-                        c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 2 * sizeof(int));
-                    }
-                }
-                    // receive info about other players
-                else if (c->recv_buffer[0] == 't') {
-                    if (c->recv_buffer.size() < 1 + state.player_count * sizeof(int)) {
-                        return; //wait for more data
-                    }
-                    else {
-                        std::cout << "receving the info about other players" << std::endl;
-                        for (int i = 0; i < state.player_count; i++) {
-                            memcpy(&state.players[i].team, c->recv_buffer.data() + 1 + i * sizeof(int), sizeof(int));
-                        }
-                        c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + state.player_count * sizeof(int));
-                    }
-                }
-
-                    // in game
-                else {
-//                    std::cout << "Receiving info..." << std::endl;
-                    assert(c->recv_buffer[0] == 's');
-					size_t packet_len = 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (state.player_count * 20 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int);
-                    if (c->recv_buffer.size() < packet_len) {
-//                        std::cout << "Num players " << state.player_count << std::endl;
-//                        std::cout << "Buffer size " << c->recv_buffer.size() << ", should be " << (1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) << std::endl;
-                        return; //wait for more data
-                    }
-                    else {
-                        //if buffer length is more than twice the length of a full update, skip all but the last one
-						while (c->recv_buffer.size() >= 2 * packet_len) {
-							c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
-						}
-
-						// update if the player if shot
-                        memcpy(&get_own_player().is_shot, c->recv_buffer.data() + 1, sizeof(bool));
-
-						// update current game points
-						memcpy(&state.current_points, c->recv_buffer.data() + 1 + 1 * sizeof(bool), 2 * sizeof(uint32_t));
-
-                        // update the players and the harpoons
-                        for (int i = 0; i < state.player_count; i++) {
-                            //TODO: don't update position if it's self and close enough?
-                            memcpy(&state.players[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 0) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.players[i].velocity, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 3) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::vec3));
-
-                            // only update player rotation if it's another player
-                            if (player_id != i) {
-                                memcpy(&state.players[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 6) * sizeof(float) + (i + 0) * sizeof(int), sizeof(glm::quat));
+                        while (!(c->recv_buffer.empty())) {
+                            assert(event == Connection::OnRecv);
+                            // game begins
+                            if (c->recv_buffer[0] == 'b') {
+                                if (c->recv_buffer.size() < 1 + 2 * sizeof(int)) {
+                                    return; //wait for more data
+                                }
+                                else {
+                                    std::cout << "Enter the lobby." << std::endl;
+                                    memcpy(&state.player_count,
+                                           c->recv_buffer.data() + 1 + 0 * sizeof(int),
+                                           sizeof(int));
+                                    memcpy(&get_own_player().team,
+                                           c->recv_buffer.data() + 1 + 1 * sizeof(int),
+                                           sizeof(int));
+                                    c->recv_buffer
+                                        .erase(c->recv_buffer.begin(), c->recv_buffer.begin() + 1 + 2 * sizeof(int));
+                                }
+                            }
+                                // receive info about other players
+                            else if (c->recv_buffer[0] == 't') {
+                                if (c->recv_buffer.size() < 1 + state.player_count * sizeof(int)) {
+                                    return; //wait for more data
+                                }
+                                else {
+                                    std::cout << "receving the info about other players" << std::endl;
+                                    for (int i = 0; i < state.player_count; i++) {
+                                        memcpy(&state.players[i].team,
+                                               c->recv_buffer.data() + 1 + i * sizeof(int),
+                                               sizeof(int));
+                                    }
+                                    c->recv_buffer.erase(c->recv_buffer.begin(),
+                                                         c->recv_buffer.begin() + 1 + state.player_count * sizeof(int));
+                                }
                             }
 
-                            memcpy(&state.harpoons[i].state, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 10) * sizeof(float) + (i + 0) * sizeof(int), sizeof(int));
-                            memcpy(&state.harpoons[i].position, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 10) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.harpoons[i].velocity, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 13) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.harpoons[i].rotation, c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t) + (i * 20 + 16) * sizeof(float) + (i + 1) * sizeof(int), sizeof(glm::quat));
-                        }
-                        // update treasure pos and state
-                        for (int j = 0; j < 2; j++) {
-                            memcpy(&state.treasures[j].position, c->recv_buffer.data() + 1 + sizeof(bool) + 2 * sizeof(uint32_t) + (state.player_count * 20 + j * 3 + 0) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(glm::vec3));
-                            memcpy(&state.treasures[j].held_by,    c->recv_buffer.data() + 1 + sizeof(bool) + 2 * sizeof(uint32_t) + (state.player_count * 20 + j * 3 + 3) * sizeof(float) + (j + state.player_count) * sizeof(int), sizeof(int));
-                        }
+                                // in game
+                            else {
+//                    std::cout << "Receiving info..." << std::endl;
+                                assert(c->recv_buffer[0] == 's');
+                                size_t packet_len = 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                    + (state.player_count * 20 + 6) * sizeof(float)
+                                    + (state.player_count + 2) * sizeof(int);
+                                if (c->recv_buffer.size() < packet_len) {
+//                        std::cout << "Num players " << state.player_count << std::endl;
+//                        std::cout << "Buffer size " << c->recv_buffer.size() << ", should be " << (1 + 1 * sizeof(bool) + (state.player_count * 16 + 6) * sizeof(float) + (state.player_count + 2) * sizeof(int)) << std::endl;
+                                    return; //wait for more data
+                                }
+                                else {
+                                    //if buffer length is more than twice the length of a full update, skip all but the last one
+                                    while (c->recv_buffer.size() >= 2 * packet_len) {
+                                        c->recv_buffer
+                                            .erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
+                                    }
 
-                        //1 for 's' char
-                        //1 bool for is_shot
-                        //player_count * 20 floats for pos(3), vel(3), rot(4), harpoon pos(3), harpoon vel(3), harpoon rotation(4), plus 6 for two treasure pos(3)
-                        //player_count ints for harpoon states, plus 2 for two treasure held_by
-                        c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
+                                    // update if the player if shot
+                                    memcpy(&get_own_player().is_shot, c->recv_buffer.data() + 1, sizeof(bool));
+
+                                    // update current game points
+                                    memcpy(&state.current_points,
+                                           c->recv_buffer.data() + 1 + 1 * sizeof(bool),
+                                           2 * sizeof(uint32_t));
+
+                                    // update the players and the harpoons
+                                    for (int i = 0; i < state.player_count; i++) {
+                                        //TODO: don't update position if it's self and close enough?
+                                        memcpy(&state.players[i].position,
+                                               c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (i * 20 + 0) * sizeof(float) + (i + 0) * sizeof(int),
+                                               sizeof(glm::vec3));
+                                        memcpy(&state.players[i].velocity,
+                                               c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (i * 20 + 3) * sizeof(float) + (i + 0) * sizeof(int),
+                                               sizeof(glm::vec3));
+
+                                        // only update player rotation if it's another player
+                                        if (player_id != i) {
+                                            memcpy(&state.players[i].rotation,
+                                                   c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                                       + (i * 20 + 6) * sizeof(float) + (i + 0) * sizeof(int),
+                                                   sizeof(glm::quat));
+                                        }
+
+                                        memcpy(&state.harpoons[i].state,
+                                               c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (i * 20 + 10) * sizeof(float) + (i + 0) * sizeof(int),
+                                               sizeof(int));
+                                        memcpy(&state.harpoons[i].position,
+                                               c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (i * 20 + 10) * sizeof(float) + (i + 1) * sizeof(int),
+                                               sizeof(glm::vec3));
+                                        memcpy(&state.harpoons[i].velocity,
+                                               c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (i * 20 + 13) * sizeof(float) + (i + 1) * sizeof(int),
+                                               sizeof(glm::vec3));
+                                        memcpy(&state.harpoons[i].rotation,
+                                               c->recv_buffer.data() + 1 + 1 * sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (i * 20 + 16) * sizeof(float) + (i + 1) * sizeof(int),
+                                               sizeof(glm::quat));
+                                    }
+                                    // update treasure pos and state
+                                    for (int j = 0; j < 2; j++) {
+                                        memcpy(&state.treasures[j].position,
+                                               c->recv_buffer.data() + 1 + sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (state.player_count * 20 + j * 3 + 0) * sizeof(float)
+                                                   + (j + state.player_count) * sizeof(int),
+                                               sizeof(glm::vec3));
+                                        memcpy(&state.treasures[j].held_by,
+                                               c->recv_buffer.data() + 1 + sizeof(bool) + 2 * sizeof(uint32_t)
+                                                   + (state.player_count * 20 + j * 3 + 3) * sizeof(float)
+                                                   + (j + state.player_count) * sizeof(int),
+                                               sizeof(int));
+                                    }
+
+                                    //1 for 's' char
+                                    //1 bool for is_shot
+                                    //player_count * 20 floats for pos(3), vel(3), rot(4), harpoon pos(3), harpoon vel(3), harpoon rotation(4), plus 6 for two treasure pos(3)
+                                    //player_count ints for harpoon states, plus 2 for two treasure held_by
+                                    c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
+                                }
+                            }
+                        }
                     }
-                }
-            }
-        }
-    }, 0.01);
+                }, 0.01);
 }
 
-void GameMode::update(float elapsed) {
+void GameMode::update(float elapsed)
+{
 
     for (uint32_t team = 0; team < state.num_teams; team++) {
         if (state.current_points[team] >= state.max_points) {
@@ -452,20 +506,21 @@ void GameMode::update(float elapsed) {
         float spd;
         if (state.treasures[0].held_by == player_id || state.treasures[1].held_by == player_id) {
             spd = GameState::slowed_player_speed;
-        } else {
+        }
+        else {
             spd = GameState::default_player_speed;
         }
 
-		glm::vec3 goalVel = glm::vec3(0, 0, 0);
+        glm::vec3 goalVel = glm::vec3(0, 0, 0);
 
         if (controls.right) goalVel += spd * directions[0];
         if (controls.left) goalVel -= spd * directions[0];
         if (controls.back) goalVel += spd * directions[2];
         if (controls.fwd) goalVel -= spd * directions[2];
 
-		vel = lerp(vel, goalVel, FRICTION * elapsed);
+        vel = lerp(vel, goalVel, FRICTION * elapsed);
 
-		players_transform.at(player_id)->position += vel * elapsed;
+        players_transform.at(player_id)->position += vel * elapsed;
     }
 
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;
@@ -488,6 +543,7 @@ void GameMode::update(float elapsed) {
     for (auto const &pair : state.players) {
 
         players_transform.at(pair.first)->position = state.players.at(pair.first).position;
+        players_transform.at(pair.first)->rotation = state.players.at(pair.first).rotation;
 
         // if own harpoon is held by player, update own harpoon
         if (pair.first == player_id && state.harpoons.at(pair.first).state == 0) {
@@ -498,7 +554,8 @@ void GameMode::update(float elapsed) {
 
             harpoons_transform.at(pair.first)->position = harpoon_pos_rot.first;
             harpoons_transform.at(pair.first)->rotation = harpoon_pos_rot.second;
-        } else {
+        }
+        else {
             harpoons_transform.at(pair.first)->position = state.harpoons.at(pair.first).position;
             harpoons_transform.at(pair.first)->rotation = state.harpoons.at(pair.first).rotation;
         }
@@ -519,14 +576,16 @@ void GameMode::update(float elapsed) {
         if (state.treasures[team].held_by == player_id) {
             treasures_transform[team]->position = treasure_pos_rot.first;
 //            treasures_transform[team]->rotation = treasure_pos_rot.second;
-        } else {
+        }
+        else {
             treasures_transform[team]->position = state.treasures[team].position;
         }
     }
 
 }
 
-void GameMode::draw(glm::uvec2 const &drawable_size) {
+void GameMode::draw(glm::uvec2 const &drawable_size)
+{
     //set up basic OpenGL state:
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
@@ -561,7 +620,10 @@ void GameMode::draw(glm::uvec2 const &drawable_size) {
 
             float height = 0.06f;
             draw_text(message, glm::vec2(-0.9f * camera->aspect, -0.9f), height, team_colors[get_own_player().team]);
-            draw_text(message, glm::vec2(-0.9f * camera->aspect, -0.9f + 0.01f), height, glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+            draw_text(message,
+                      glm::vec2(-0.9f * camera->aspect, -0.9f + 0.01f),
+                      height,
+                      glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
         }
     }
 
@@ -607,7 +669,8 @@ void GameMode::show_game_over_menu()
 
     if (state.current_points[0] == std::max(state.current_points[0], state.current_points[1])) {
         menu->choices.emplace_back("TEAM 1 WINS");
-    } else {
+    }
+    else {
         menu->choices.emplace_back("TEAM 2 WINS");
     }
 
