@@ -39,6 +39,7 @@ const float FogDensity = 0.05;
 const vec3 waterGradient = vec3(0.341, 0.91, 0.918);
 const float total_water_depth = 10;
 const float gradient_bias = 0.5;
+const float min_light = 0.3;
 
 void main() {
 	vec3 total_light = vec3(0.0, 0.0, 0.0);
@@ -50,7 +51,7 @@ void main() {
 	}
 	{ //sun (directional) light:
 		vec3 l = sun_direction;
-		float nl = max(0.0, dot(n,l));
+		float nl = max(min_light, dot(n,l));
 		total_light += nl * sun_color;
 	}
 	vec3 light_color = color.rgb * total_light;
