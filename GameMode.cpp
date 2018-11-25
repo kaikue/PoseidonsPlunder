@@ -270,7 +270,8 @@ GameMode::GameMode(Client &client_,
 		};
 
 		Scene::Transform *transform = current_scene->new_transform();
-		transform->position.x = 0.0f;
+		transform->position = glm::vec3(1.0f, 5.0f, 3.0f);
+		// transform->rotation = glm::quat(0.0f, 0.0f, 1.0f, 1.0f);
 		Scene::Object *player_anim = current_scene->new_object(transform);
 		player_anim->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
 
@@ -569,6 +570,8 @@ void GameMode::update(float elapsed)
     get_own_player().rotation =
         glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
 
+    std::cout<<glm::to_string(players_transform.at(player_id)->position)<<std::endl;
+
     // send player action and position to server
     if (client.connection) {
         send_action(&client.connection);
@@ -624,11 +627,12 @@ void GameMode::update(float elapsed)
 
     {
 		float step = 0.0f;
-		if (controls.fwd) step += elapsed * 4.0f;
-		if (controls.back) step -= elapsed * 4.0f;
-		player_anim->transform->position.y += step;
+		if (controls.fwd) step += elapsed * 1.0f;
+		if (controls.back) step -= elapsed * 1.0f;
+		// player_anim->transform->position.y += step;
 		player_animations[0].position -= step / 1.0f;
 		player_animations[0].position -= std::floor(player_animations[0].position);
+        // std::cout<<player_animations[0].position<<std::endl;
 	}
 
     for (auto &anim : player_animations) {
