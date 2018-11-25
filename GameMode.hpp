@@ -8,6 +8,7 @@
 #include "GameState.hpp"
 #include "Scene.hpp"
 #include "Skybox.hpp"
+#include "BoneAnimation.hpp"
 
 #include <math.h>
 #include <SDL.h>
@@ -75,6 +76,12 @@ struct GameMode: public Mode
     float azimuth, elevation;
 
     Skybox underwater_skybox;
+
+    std::vector< BoneAnimationPlayer > player_animations;
+
+    Scene::Object * player_anim = nullptr;
+
+    Scene::Transform * player_anim_transform;
 
     //------ networking ------
     Client &client; //client object; manages connection to server.

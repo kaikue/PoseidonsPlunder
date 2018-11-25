@@ -10,7 +10,9 @@
 #include "compile_program.hpp" //helper to compile opengl shader programs
 #include "draw_text.hpp" //helper to... um.. draw text
 #include "vertex_color_program.hpp"
+#include "bone_vertex_color_program.hpp"
 #include "load_save_png.hpp"
+#include "BoneAnimation.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -60,6 +62,18 @@ static std::array<Scene::Transform *, 2> treasures_transform;
 
 static Scene *current_scene = nullptr;
 
+BoneAnimation::Animation const *player_banim_swim = nullptr;
+
+Load< BoneAnimation > player_banims(LoadTagDefault, [](){
+	auto ret = new BoneAnimation(data_path("test_level_complex.banim"));
+	player_banim_swim = &(ret->lookup("Swim"));
+	return ret;
+});
+
+Load< GLuint > player_banims_for_bone_vertex_color_program(LoadTagDefault, [](){
+	return new GLuint(player_banims->make_vao_for_program(bone_vertex_color_program->program));
+});
+
 Load<Scene> scene(LoadTagDefault, []()
 {
     Scene *ret = new Scene;
@@ -92,7 +106,7 @@ Load<Scene> scene(LoadTagDefault, []()
         if (t->name == "Player") {
             player_mesh_name = m;
             return;
-        }
+        }   
         if (t->name == "Rope") {
             rope_mesh_name = m;
             return;
@@ -237,6 +251,32 @@ GameMode::GameMode(Client &client_,
     treasures_transform[0]->position = state.treasures[0].position;
     treasures_transform[1]->position = state.treasures[1].position;
 
+    { //put some plants around the edge:
+		Scene::Object::ProgramInfo player_anim_info;
+		player_anim_info.program = bone_vertex_color_program->program;
+		player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
+		player_anim_info.start = player_banims->mesh.start;
+		player_anim_info.count = player_banims->mesh.count;
+		player_anim_info.mvp_mat4 = bone_vertex_color_program->object_to_clip_mat4;
+		player_anim_info.mv_mat4x3 = bone_vertex_color_program->object_to_light_mat4x3;
+		player_anim_info.itmv_mat3 = bone_vertex_color_program->normal_to_light_mat3;
+
+		player_animations.emplace_back(*player_banims, *player_banim_swim, BoneAnimationPlayer::Loop, 0.0f);
+
+		BoneAnimationPlayer *player_anim_player = &player_animations.back();
+	
+		player_anim_info.set_uniforms = [player_anim_player](){
+			player_anim_player->set_uniform(bone_vertex_color_program->bones_mat4x3_array);
+		};
+
+		Scene::Transform *transform = current_scene->new_transform();
+		transform->position.x = 0.0f;
+		Scene::Object *player_anim = current_scene->new_object(transform);
+		player_anim->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
+
+		this->player_anim = player_anim;
+	}
+    
     // OpenGL setup
     //set up light position + color:
     glUseProgram(vertex_color_program->program);
@@ -581,6 +621,19 @@ void GameMode::update(float elapsed)
             treasures_transform[team]->position = state.treasures[team].position;
         }
     }
+
+    {
+		float step = 0.0f;
+		if (controls.fwd) step += elapsed * 4.0f;
+		if (controls.back) step -= elapsed * 4.0f;
+		player_anim->transform->position.y += step;
+		player_animations[0].position -= step / 1.0f;
+		player_animations[0].position -= std::floor(player_animations[0].position);
+	}
+
+    for (auto &anim : player_animations) {
+		anim.update(elapsed);
+	}
 
 }
 

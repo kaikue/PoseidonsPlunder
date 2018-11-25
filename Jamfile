@@ -75,6 +75,7 @@ CLIENT_NAMES =
 	main
 	compile_program
 	vertex_color_program
+	bone_vertex_color_program
 	texture_program
 	depth_program
 	Mode
@@ -85,6 +86,7 @@ CLIENT_NAMES =
 	draw_text
 	Sound
 	Skybox
+	BoneAnimation
 	;
 
 if $(OS) = NT {
