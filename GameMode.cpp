@@ -60,6 +60,10 @@ static std::array<Scene::Transform *, 2> treasures_transform;
 
 static Scene *current_scene = nullptr;
 
+Load< Sound::Sample > sound_loop(LoadTagDefault, [](){
+	return new Sound::Sample(data_path("loop.wav"));
+});
+
 Load<Scene> scene(LoadTagDefault, []()
 {
     Scene *ret = new Scene;
@@ -160,6 +164,8 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
     players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+
+    sound_loop->play(players_transform.at(player_id)->position, 1.0f, Sound::LoopOrOnce::Loop);
 
     // only spawn player mesh if not its own
     if (player_id != id) {
