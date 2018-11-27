@@ -183,23 +183,23 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
         // Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
         // std::cout<<"at: "<<glm::to_string(players_transform.at(id)->position)<<std::endl;
         // // Added
-        // Scene::Object::ProgramInfo player_anim_info;
-		// player_anim_info.program = bone_vertex_color_program->program;
-		// player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
-		// player_anim_info.start = player_banims->mesh.start;
-		// player_anim_info.count = player_banims->mesh.count;
-		// player_anim_info.mvp_mat4 = bone_vertex_color_program->object_to_clip_mat4;
-		// player_anim_info.mv_mat4x3 = bone_vertex_color_program->object_to_light_mat4x3;
-		// player_anim_info.itmv_mat3 = bone_vertex_color_program->normal_to_light_mat3;
+        Scene::Object::ProgramInfo player_anim_info;
+		player_anim_info.program = bone_vertex_color_program->program;
+		player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
+		player_anim_info.start = player_banims->mesh.start;
+		player_anim_info.count = player_banims->mesh.count;
+		player_anim_info.mvp_mat4 = bone_vertex_color_program->object_to_clip_mat4;
+		player_anim_info.mv_mat4x3 = bone_vertex_color_program->object_to_light_mat4x3;
+		player_anim_info.itmv_mat3 = bone_vertex_color_program->normal_to_light_mat3;
 
-		// player_animations.insert(std::make_pair(id, BoneAnimationPlayer(*player_banims, 
-        //         *player_banim_swim, BoneAnimationPlayer::Loop, 0.0f)));
+		player_animations.insert(std::make_pair(id, BoneAnimationPlayer(*player_banims, 
+                *player_banim_swim, BoneAnimationPlayer::Loop, 0.0f)));
 
-		// BoneAnimationPlayer *player_anim_player = &player_animations.at(id);
+		BoneAnimationPlayer *player_anim_player = &player_animations.at(id);
 	
-		// player_anim_info.set_uniforms = [player_anim_player](){
-		// 	player_anim_player->set_uniform(bone_vertex_color_program->bones_mat4x3_array);
-		// };
+		player_anim_info.set_uniforms = [player_anim_player](){
+			player_anim_player->set_uniform(bone_vertex_color_program->bones_mat4x3_array);
+		};
 
         // player_obj->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
 
@@ -215,14 +215,15 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
         // from orig:
         Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
 
-        player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+        // player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+        player_obj->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
 
-        MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
-        player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
-        player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+        // MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
+        // player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+        // player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
 
-        player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
-        player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+        // player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+        // player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     }
 
     {
@@ -392,13 +393,16 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
             // Note: float(window_size.y) * camera->fovy is a pixels-to-radians
             // conversion factor
             float yaw = evt.motion.xrel / float(window_size.y) * camera->fovy;
-            float pitch = evt.motion.yrel / float(window_size.y) * camera->fovy;
+            float pitch = -evt.motion.yrel / float(window_size.y) * camera->fovy;
 
             azimuth -= yaw;
             elevation = glm::clamp(elevation - pitch, 0.0f, static_cast<float>(M_PI));
+            // std::cout<<glm::to_string(state.camera_offset_to_player)<<std::endl;
             /// Build a quaternion from euler angles (pitch, yaw, roll), in radians.
             players_transform.at(player_id)->rotation = glm::inverse(get_pos_rot(state.camera_offset_to_player).second)
                 * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
+                // * glm::quat(glm::vec3(-elevation, azimuth, 0.0f));
+                // * glm::quat(glm::vec3(elevation, 0.0f, -azimuth));
             return true;
         }
     }
@@ -615,6 +619,7 @@ void GameMode::update(float elapsed)
     get_own_player().position = players_transform.at(player_id)->position;
     get_own_player().rotation =
         glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
+        // glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(-elevation, -azimuth, 0.0f));
 
     // std::cout<<glm::to_string(players_transform.at(player_id)->position)<<std::endl;
 
@@ -684,19 +689,9 @@ void GameMode::update(float elapsed)
         // }
         // std::cout<<player_animations[0].position<<std::endl;
         for (auto it = player_animations.begin(); it != player_animations.end(); it++){
-            // auto got = player_animations.find(1-player_id);
-            // if (got != player_animations.end()){
-            //     std::cout<<"key: "<<got->first<<std::endl;
-            // }
-            // player_animations.at(0).transform
-
             it->second.position -= step / 1.0f;
             it->second.position -= std::floor(it->second.position);
-            // std::cout<<"it->second.position: "<<it->second.position<<std::endl;
-
         }
-        // std::cout<<"player_animations.size: "<<player_animations.size()<<std::endl;
-        // std::cout<<"player_id:"<<player_id<<std::endl;
 	}
 
     for (auto &anim : player_animations) {
