@@ -111,17 +111,19 @@ Load<Scene> scene(LoadTagDefault, []()
             rope_mesh_name = m;
             return;
         }
+        // if (t->name != "Player"){
+            Scene::Object *obj = s.new_object(t);
 
-        Scene::Object *obj = s.new_object(t);
+            obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
 
-        obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+            MeshBuffer::Mesh const &mesh = meshes->lookup(m);
+            obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+            obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
 
-        MeshBuffer::Mesh const &mesh = meshes->lookup(m);
-        obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
-        obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+            obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+            obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+        // }
 
-        obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
-        obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
     });
 
     //look up the camera:
@@ -177,6 +179,40 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
 
     // only spawn player mesh if not its own
     if (player_id != id) {
+        // std::cout<<"Spawning mesh of player: "<<id<<std::endl;
+        // Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
+        // std::cout<<"at: "<<glm::to_string(players_transform.at(id)->position)<<std::endl;
+        // // Added
+        // Scene::Object::ProgramInfo player_anim_info;
+		// player_anim_info.program = bone_vertex_color_program->program;
+		// player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
+		// player_anim_info.start = player_banims->mesh.start;
+		// player_anim_info.count = player_banims->mesh.count;
+		// player_anim_info.mvp_mat4 = bone_vertex_color_program->object_to_clip_mat4;
+		// player_anim_info.mv_mat4x3 = bone_vertex_color_program->object_to_light_mat4x3;
+		// player_anim_info.itmv_mat3 = bone_vertex_color_program->normal_to_light_mat3;
+
+		// player_animations.insert(std::make_pair(id, BoneAnimationPlayer(*player_banims, 
+        //         *player_banim_swim, BoneAnimationPlayer::Loop, 0.0f)));
+
+		// BoneAnimationPlayer *player_anim_player = &player_animations.at(id);
+	
+		// player_anim_info.set_uniforms = [player_anim_player](){
+		// 	player_anim_player->set_uniform(bone_vertex_color_program->bones_mat4x3_array);
+		// };
+
+        // player_obj->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
+
+        // MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
+        // std::cout<<"mesh.start: "<<mesh.start<<", mesh.count: "<<mesh.count<<std::endl;
+        // player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+        // player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+
+        // player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+        // player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+
+        
+        // from orig:
         Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
 
         player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
@@ -251,32 +287,33 @@ GameMode::GameMode(Client &client_,
     treasures_transform[0]->position = state.treasures[0].position;
     treasures_transform[1]->position = state.treasures[1].position;
 
-    { //put some plants around the edge:
-		Scene::Object::ProgramInfo player_anim_info;
-		player_anim_info.program = bone_vertex_color_program->program;
-		player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
-		player_anim_info.start = player_banims->mesh.start;
-		player_anim_info.count = player_banims->mesh.count;
-		player_anim_info.mvp_mat4 = bone_vertex_color_program->object_to_clip_mat4;
-		player_anim_info.mv_mat4x3 = bone_vertex_color_program->object_to_light_mat4x3;
-		player_anim_info.itmv_mat3 = bone_vertex_color_program->normal_to_light_mat3;
+    // { //put some plants around the edge:
+	// 	Scene::Object::ProgramInfo player_anim_info;
+	// 	player_anim_info.program = bone_vertex_color_program->program;
+	// 	player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
+	// 	player_anim_info.start = player_banims->mesh.start;
+	// 	player_anim_info.count = player_banims->mesh.count;
+	// 	player_anim_info.mvp_mat4 = bone_vertex_color_program->object_to_clip_mat4;
+	// 	player_anim_info.mv_mat4x3 = bone_vertex_color_program->object_to_light_mat4x3;
+	// 	player_anim_info.itmv_mat3 = bone_vertex_color_program->normal_to_light_mat3;
 
-		player_animations.emplace_back(*player_banims, *player_banim_swim, BoneAnimationPlayer::Loop, 0.0f);
+	// 	player_animations.emplace_back(*player_banims, *player_banim_swim, BoneAnimationPlayer::Loop, 0.0f);
 
-		BoneAnimationPlayer *player_anim_player = &player_animations.back();
+	// 	BoneAnimationPlayer *player_anim_player = &player_animations.back();
 	
-		player_anim_info.set_uniforms = [player_anim_player](){
-			player_anim_player->set_uniform(bone_vertex_color_program->bones_mat4x3_array);
-		};
+	// 	player_anim_info.set_uniforms = [player_anim_player](){
+	// 		player_anim_player->set_uniform(bone_vertex_color_program->bones_mat4x3_array);
+	// 	};
 
-		Scene::Transform *transform = current_scene->new_transform();
-		transform->position = glm::vec3(1.0f, 5.0f, 3.0f);
-		// transform->rotation = glm::quat(0.0f, 0.0f, 1.0f, 1.0f);
-		Scene::Object *player_anim = current_scene->new_object(transform);
-		player_anim->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
+	// 	Scene::Transform *transform = current_scene->new_transform();
+	// 	transform->position = glm::vec3(1.0f, 5.0f, 3.0f);
+    //     transform->rotation = glm::angleAxis(float(M_PI/2.0), glm::vec3(0.0, 1.0, 0.0));
+	// 	// transform->rotation = glm::quat(0.0f, 0.0f, 1.0f, 1.0f);
+	// 	Scene::Object *player_anim = current_scene->new_object(transform);
+	// 	player_anim->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
 
-		this->player_anim = player_anim;
-	}
+	// 	this->player_anim = player_anim;
+	// }
     
     // OpenGL setup
     //set up light position + color:
@@ -286,6 +323,15 @@ GameMode::GameMode(Client &client_,
                  glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
     glUniform3fv(vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.2, 0.2, 0.3)));
     glUniform3fv(vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
+    glUseProgram(0);
+
+    // animation vertex color program
+    glUseProgram(bone_vertex_color_program->program);
+    glUniform3fv(bone_vertex_color_program->sun_color_vec3, 1, glm::value_ptr(glm::vec3(0.05f, 0.81f, 0.91f)));
+    glUniform3fv(bone_vertex_color_program->sun_direction_vec3, 1,
+                 glm::value_ptr(glm::normalize(glm::vec3(-0.2f, 0.2f, 1.0f))));
+    glUniform3fv(bone_vertex_color_program->sky_color_vec3, 1, glm::value_ptr(glm::vec3(0.2, 0.2, 0.3)));
+    glUniform3fv(bone_vertex_color_program->sky_direction_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 1.0f, 0.0f)));
     glUseProgram(0);
 }
 
@@ -570,7 +616,7 @@ void GameMode::update(float elapsed)
     get_own_player().rotation =
         glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
 
-    std::cout<<glm::to_string(players_transform.at(player_id)->position)<<std::endl;
+    // std::cout<<glm::to_string(players_transform.at(player_id)->position)<<std::endl;
 
     // send player action and position to server
     if (client.connection) {
@@ -587,6 +633,7 @@ void GameMode::update(float elapsed)
 
         players_transform.at(pair.first)->position = state.players.at(pair.first).position;
         players_transform.at(pair.first)->rotation = state.players.at(pair.first).rotation;
+        // std::cout<<glm::to_string(players_transform.at(pair.first)->position)<<std::endl;
 
         // if own harpoon is held by player, update own harpoon
         if (pair.first == player_id && state.harpoons.at(pair.first).state == 0) {
@@ -618,7 +665,6 @@ void GameMode::update(float elapsed)
     for (int team = 0; team < state.num_teams; team++) {
         if (state.treasures[team].held_by == player_id) {
             treasures_transform[team]->position = treasure_pos_rot.first;
-//            treasures_transform[team]->rotation = treasure_pos_rot.second;
         }
         else {
             treasures_transform[team]->position = state.treasures[team].position;
@@ -630,13 +676,31 @@ void GameMode::update(float elapsed)
 		if (controls.fwd) step += elapsed * 1.0f;
 		if (controls.back) step -= elapsed * 1.0f;
 		// player_anim->transform->position.y += step;
-		player_animations[0].position -= step / 1.0f;
-		player_animations[0].position -= std::floor(player_animations[0].position);
+		// player_animations[0].position -= step / 1.0f;
+		// player_animations[0].position -= std::floor(player_animations[0].position);
+        // if (player_animations.find(0) == player_animations.end()){
+        //     player_animations.at(0).position -= step / 1.0f;
+        //     player_animations.at(0).position -= std::floor(player_animations.at(0).position);
+        // }
         // std::cout<<player_animations[0].position<<std::endl;
+        for (auto it = player_animations.begin(); it != player_animations.end(); it++){
+            // auto got = player_animations.find(1-player_id);
+            // if (got != player_animations.end()){
+            //     std::cout<<"key: "<<got->first<<std::endl;
+            // }
+            // player_animations.at(0).transform
+
+            it->second.position -= step / 1.0f;
+            it->second.position -= std::floor(it->second.position);
+            // std::cout<<"it->second.position: "<<it->second.position<<std::endl;
+
+        }
+        // std::cout<<"player_animations.size: "<<player_animations.size()<<std::endl;
+        // std::cout<<"player_id:"<<player_id<<std::endl;
 	}
 
     for (auto &anim : player_animations) {
-		anim.update(elapsed);
+		anim.second.update(elapsed);
 	}
 
 }

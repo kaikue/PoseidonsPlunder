@@ -77,11 +77,12 @@ struct GameMode: public Mode
 
     Skybox underwater_skybox;
 
-    std::vector< BoneAnimationPlayer > player_animations;
+    // std::vector< BoneAnimationPlayer > player_animations;
+    std::unordered_map< uint32_t, BoneAnimationPlayer > player_animations;
 
-    Scene::Object * player_anim = nullptr;
+    // Scene::Object * player_anim = nullptr;
 
-    Scene::Transform * player_anim_transform;
+    // Scene::Transform * player_anim_transform;
 
     //------ networking ------
     Client &client; //client object; manages connection to server.
