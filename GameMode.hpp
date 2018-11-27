@@ -8,6 +8,7 @@
 #include "GameState.hpp"
 #include "Scene.hpp"
 #include "Skybox.hpp"
+#include "Sound.hpp"
 
 #include <math.h>
 #include <SDL.h>

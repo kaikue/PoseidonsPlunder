@@ -46,6 +46,7 @@ struct LobbyMode : public Mode {
 	std::vector<std::string> names_first;
 	std::vector<std::string> names_second;
 	bool checked_teams = false;
+	bool ready = false;
 
 	void switch_team(int new_team);
 
@@ -60,7 +61,7 @@ struct LobbyMode : public Mode {
 
 	void send_lobby_info(Connection *c);
 
-	void send_start(Connection *c);
+	void send_ready(Connection *c);
 
 	void poll_server();
 

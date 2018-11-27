@@ -188,7 +188,7 @@ public:
 
     GameState();
 
-    void add_player(uint32_t id, uint32_t team);
+    void add_player(uint32_t id, uint32_t team, std::string nickname);
 
     void add_treasure(uint32_t team);
 

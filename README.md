@@ -25,8 +25,6 @@ Server movement validation:
 - Or just use Kai's prebuilt bullet: https://www.dropbox.com/s/9bh7d5jfm2hbtxq/bullet.zip?dl=0
 
 ## TODO
-- Lobby
-	- add ability to cancel "ok to start"
 - remove cout's
 - make everything use Translation struct and sizeof()
 	- send harpoon rotations
