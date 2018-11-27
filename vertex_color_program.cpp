@@ -36,7 +36,7 @@ out vec4 fragColor;
 const vec3 fogColor = vec3(0.11, 0.26, 0.42);
 const float FogDensity = 0.05;
 
-const vec3 waterGradient = vec3(0.341, 0.91, 0.918);
+const vec3 waterGradient = vec3(0.91, 1, 1);
 const float total_water_depth = 10;
 const float gradient_bias = 0.5;
 const float min_light = 0.3;
