@@ -52,7 +52,7 @@ Load< GLuint > empty_vao(LoadTagDefault, []() {
 	return new GLuint(vao);
 });
 
-Load< GLuint > blur_program(LoadTagDefault, []() {
+Load< GLuint > hit_program(LoadTagDefault, []() {
 	GLuint program = compile_program(
 		//this draws a triangle that covers the entire screen:
 		"#version 330\n"
@@ -100,6 +100,34 @@ Load< GLuint > blur_program(LoadTagDefault, []() {
 	glUseProgram(0);
 
 	return new GLuint(program);
+});
+
+Load< GLuint > nohit_program(LoadTagDefault, []() {
+  GLuint program = compile_program(
+    //this draws a triangle that covers the entire screen:
+    "#version 330\n"
+    "void main() {\n"
+    "	gl_Position = vec4(4 * (gl_VertexID & 1) - 1,  2 * (gl_VertexID & 2) - 1, 0.0, 1.0);\n"
+    "}\n"
+    ,
+    //	vec4 color = texture(tex, gl_FragCoord.xy / textureSize(tex,0));
+
+    "#version 330\n"
+    "uniform sampler2D tex;\n"
+    "out vec4 fragColor;\n"
+    "void main() {\n"
+     //TODO: Add some antialiasing, maybe?
+    "	fragColor = texture(tex, gl_FragCoord.xy / textureSize(tex,0));\n"
+    "}\n"
+  );
+
+  glUseProgram(program);
+
+  glUniform1i(glGetUniformLocation(program, "tex"), 0);
+
+  glUseProgram(0);
+
+  return new GLuint(program);
 });
 
 static Scene::Lamp *sun = nullptr;
@@ -742,25 +770,6 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
         }
     }
 
-	/*if (!get_own_player().is_shot) { //TODO: remove !
-		//Copy scene from color buffer to screen, performing post-processing effects:
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
-		glUseProgram(*blur_program);
-		glBindVertexArray(*empty_vao);
-
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-
-		glUseProgram(0);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-	else {
-		glUseProgram(0);
-	}
-
-    GL_ERRORS();*/
-
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);
@@ -772,7 +781,8 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 	//Copy scene from color buffer to screen, performing post-processing effects:
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
-	glUseProgram(*blur_program);
+
+	glUseProgram(get_own_player().is_shot ? *hit_program : *nohit_program);
 	glBindVertexArray(*empty_vao);
 
 	glDrawArrays(GL_TRIANGLES, 0, 3);
