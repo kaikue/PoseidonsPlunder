@@ -9,6 +9,7 @@
 #include "data_path.hpp" //helper to get paths relative to executable
 #include "compile_program.hpp" //helper to compile opengl shader programs
 #include "draw_text.hpp" //helper to... um.. draw text
+#include "check_fb.hpp" //helper for checking currently bound OpenGL framebuffers
 #include "vertex_color_program.hpp"
 #include "load_save_png.hpp"
 
@@ -40,6 +41,65 @@ Load<MeshBuffer> meshes(LoadTagDefault, []()
 Load<GLuint> meshes_for_vertex_color_program(LoadTagDefault, []()
 {
     return new GLuint(meshes->make_vao_for_program(vertex_color_program->program));
+});
+
+//used for fullscreen passes:
+Load< GLuint > empty_vao(LoadTagDefault, []() {
+	GLuint vao = 0;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+	glBindVertexArray(0);
+	return new GLuint(vao);
+});
+
+Load< GLuint > blur_program(LoadTagDefault, []() {
+	GLuint program = compile_program(
+		//this draws a triangle that covers the entire screen:
+		"#version 330\n"
+		"void main() {\n"
+		"	gl_Position = vec4(4 * (gl_VertexID & 1) - 1,  2 * (gl_VertexID & 2) - 1, 0.0, 1.0);\n"
+		"}\n"
+		,
+		//NOTE on reading screen texture:
+		//texelFetch() gives direct pixel access with integer coordinates, but accessing out-of-bounds pixel is undefined:
+		//	vec4 color = texelFetch(tex, ivec2(gl_FragCoord.xy), 0);
+		//texture() requires using [0,1] coordinates, but handles out-of-bounds more gracefully (using wrap settings of underlying texture):
+		//	vec4 color = texture(tex, gl_FragCoord.xy / textureSize(tex,0));
+
+		"#version 330\n"
+		"uniform sampler2D tex;\n"
+		"out vec4 fragColor;\n"
+		"void main() {\n"
+		"	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(tex, 0)) / textureSize(tex, 0).y;\n"
+		//make tint amount more near the edges and less in the middle:
+		"	float tint_amt = max(0.0, length(at));\n" //(textureSize(tex, 0).y / textureSize(tex, 0).x) * 
+		"	float blur_amt = 2.0;"
+		//pick a vector to move in for blur using function inspired by:
+		//https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
+		"	vec2 ofs = blur_amt * normalize(vec2(\n"
+		"		fract(dot(gl_FragCoord.xy ,vec2(12.9898,78.233))),\n"
+		"		fract(dot(gl_FragCoord.xy ,vec2(96.3869,-27.5796)))\n"
+		"	));\n"
+		//do a four-pixel average to blur:
+		"	vec4 blur =\n"
+		"		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(ofs.x,ofs.y)) / textureSize(tex, 0))\n"
+		"		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(-ofs.y,ofs.x)) / textureSize(tex, 0))\n"
+		"		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(-ofs.x,-ofs.y)) / textureSize(tex, 0))\n"
+		"		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(ofs.y,-ofs.x)) / textureSize(tex, 0))\n"
+		"	;\n"
+		"	float tint_col = clamp(1.0 - tint_amt, 0.0, 1.0);"
+		"	vec4 tint = vec4(1.0, tint_col, tint_col, 1.0);"
+		"	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n"
+		"}\n"
+	);
+
+	glUseProgram(program);
+
+	glUniform1i(glGetUniformLocation(program, "tex"), 0);
+
+	glUseProgram(0);
+
+	return new GLuint(program);
 });
 
 static Scene::Lamp *sun = nullptr;
@@ -590,6 +650,47 @@ void GameMode::update(float elapsed)
 
 }
 
+//GameMode will render to some offscreen framebuffer(s).
+//This code allocates and resizes them as needed:
+struct Framebuffers {
+	glm::uvec2 size = glm::uvec2(0, 0); //remember the size of the framebuffer
+
+										//This framebuffer is used for fullscreen effects:
+	GLuint color_tex = 0;
+	GLuint depth_rb = 0;
+	GLuint fb = 0;
+
+	void allocate(glm::uvec2 const &new_size, glm::uvec2 const &new_shadow_size) {
+		//allocate full-screen framebuffer:
+		if (size != new_size) {
+			size = new_size;
+
+			if (color_tex == 0) glGenTextures(1, &color_tex);
+			glBindTexture(GL_TEXTURE_2D, color_tex);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size.x, size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			if (depth_rb == 0) glGenRenderbuffers(1, &depth_rb);
+			glBindRenderbuffer(GL_RENDERBUFFER, depth_rb);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size.x, size.y);
+			glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+			if (fb == 0) glGenFramebuffers(1, &fb);
+			glBindFramebuffer(GL_FRAMEBUFFER, fb);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb);
+			check_fb();
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			GL_ERRORS();
+		}
+	}
+} fbs;
+
 void GameMode::draw(glm::uvec2 const &drawable_size)
 {
     //set up basic OpenGL state:
@@ -606,6 +707,14 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 
     //fix aspect ratio of camera
     camera->aspect = drawable_size.x / float(drawable_size.y);
+
+	fbs.allocate(drawable_size, glm::uvec2(512, 512));
+
+	//Draw scene to off-screen framebuffer:
+	glBindFramebuffer(GL_FRAMEBUFFER, fbs.fb);
+	glViewport(0, 0, drawable_size.x, drawable_size.y);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     scene->draw(camera);
 
@@ -633,9 +742,44 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
         }
     }
 
-    glUseProgram(0);
+	/*if (!get_own_player().is_shot) { //TODO: remove !
+		//Copy scene from color buffer to screen, performing post-processing effects:
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
+		glUseProgram(*blur_program);
+		glBindVertexArray(*empty_vao);
 
-    GL_ERRORS();
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
+		glUseProgram(0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	else {
+		glUseProgram(0);
+	}
+
+    GL_ERRORS();*/
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	GL_ERRORS();
+
+	//Copy scene from color buffer to screen, performing post-processing effects:
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
+	glUseProgram(*blur_program);
+	glBindVertexArray(*empty_vao);
+
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	glUseProgram(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void GameMode::show_pause_menu()
