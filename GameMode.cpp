@@ -70,7 +70,7 @@ Load< GLuint > blur_program(LoadTagDefault, []() {
 		"uniform sampler2D tex;\n"
 		"out vec4 fragColor;\n"
 		"void main() {\n"
-		"	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(tex, 0)) / textureSize(tex, 0).y;\n"
+		"	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(tex, 0)) / textureSize(tex, 0);\n"
 		//make tint amount more near the edges and less in the middle:
 		"	float tint_amt = max(0.0, length(at));\n" //(textureSize(tex, 0).y / textureSize(tex, 0).x) * 
 		"	float blur_amt = 2.0;"
