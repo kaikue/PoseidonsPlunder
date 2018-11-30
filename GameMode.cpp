@@ -72,8 +72,8 @@ Load< GLuint > hit_program(LoadTagDefault, []() {
 		"void main() {\n"
 		"	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(tex, 0)) / textureSize(tex, 0);\n"
 		//make tint amount more near the edges and less in the middle:
-		"	float tint_amt = max(0.0, length(at));\n" //(textureSize(tex, 0).y / textureSize(tex, 0).x) * 
-		"	float blur_amt = 2.0;"
+		"	float tint_amt = max(0.0, length(at));\n"
+		"	float blur_amt = 2.0;\n"
 		//pick a vector to move in for blur using function inspired by:
 		//https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
 		"	vec2 ofs = blur_amt * normalize(vec2(\n"
@@ -87,8 +87,8 @@ Load< GLuint > hit_program(LoadTagDefault, []() {
 		"		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(-ofs.x,-ofs.y)) / textureSize(tex, 0))\n"
 		"		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(ofs.y,-ofs.x)) / textureSize(tex, 0))\n"
 		"	;\n"
-		"	float tint_col = clamp(1.0 - tint_amt, 0.0, 1.0);"
-		"	vec4 tint = vec4(1.0, tint_col, tint_col, 1.0);"
+		"	float tint_col = clamp(1.0 - tint_amt, 0.0, 1.0);\n"
+		"	vec4 tint = vec4(1.0, tint_col, tint_col, 1.0);\n"
 		"	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n"
 		"}\n"
 	);
@@ -117,7 +117,30 @@ Load< GLuint > nohit_program(LoadTagDefault, []() {
     "out vec4 fragColor;\n"
     "void main() {\n"
      //TODO: Add some antialiasing, maybe?
-    "	fragColor = texture(tex, gl_FragCoord.xy / textureSize(tex,0));\n"
+
+    //Depth of field- blur when further away
+    "	float blur_amt = 0; //gl_FragCoord.z;\n" //TODO
+    //pick a vector to move in for blur using function inspired by:
+    //https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
+    "	vec2 ofs = blur_amt * normalize(vec2(\n"
+    "		fract(dot(gl_FragCoord.xy ,vec2(12.9898,78.233))),\n"
+    "		fract(dot(gl_FragCoord.xy ,vec2(96.3869,-27.5796)))\n"
+    "	));\n"
+    //do a four-pixel average to blur:
+    "	vec4 blur =\n"
+    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(ofs.x,ofs.y)) / textureSize(tex, 0))\n"
+    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(-ofs.y,ofs.x)) / textureSize(tex, 0))\n"
+    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(-ofs.x,-ofs.y)) / textureSize(tex, 0))\n"
+    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(ofs.y,-ofs.x)) / textureSize(tex, 0))\n"
+    "	;\n"
+
+    //Vignette effect (darken around edges)
+    "	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(tex, 0)) / textureSize(tex, 0);\n"
+    "	float tint_amt = max(0.0, length(at) * 0.7);\n"
+    "	float tint_col = clamp(1.0 - tint_amt, 0.0, 1.0);\n"
+    "	vec4 tint = vec4(tint_col, tint_col, tint_col, 1.0);\n"
+    "	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n" //TODO
+    //"	fragColor = vec4(gl_FragCoord.z, 0.2, 0.2, 1.0);\n"
     "}\n"
   );
 
@@ -781,6 +804,9 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 	//Copy scene from color buffer to screen, performing post-processing effects:
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
+  
+  //TODO: copy depth buffer somehow?
+  //glBindRenderbuffer(GL_RENDERBUFFER, fbs.depth_rb);
 
 	glUseProgram(get_own_player().is_shot ? *hit_program : *nohit_program);
 	glBindVertexArray(*empty_vao);
