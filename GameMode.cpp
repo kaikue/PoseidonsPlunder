@@ -113,13 +113,15 @@ Load< GLuint > nohit_program(LoadTagDefault, []() {
     //	vec4 color = texture(tex, gl_FragCoord.xy / textureSize(tex,0));
 
     "#version 330\n"
-    "uniform sampler2D tex;\n"
+    "uniform sampler2D color_tex;\n"
+		"uniform sampler2D depth_tex;\n"
     "out vec4 fragColor;\n"
     "void main() {\n"
      //TODO: Add some antialiasing, maybe?
 
     //Depth of field- blur when further away
-    "	float blur_amt = 0; //gl_FragCoord.z;\n" //TODO
+    " float depth = texelFetch(depth_tex, ivec2(gl_FragCoord.xy), 0).r;\n"
+    "	float blur_amt = depth;\n"
     //pick a vector to move in for blur using function inspired by:
     //https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
     "	vec2 ofs = blur_amt * normalize(vec2(\n"
@@ -128,25 +130,26 @@ Load< GLuint > nohit_program(LoadTagDefault, []() {
     "	));\n"
     //do a four-pixel average to blur:
     "	vec4 blur =\n"
-    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(ofs.x,ofs.y)) / textureSize(tex, 0))\n"
-    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(-ofs.y,ofs.x)) / textureSize(tex, 0))\n"
-    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(-ofs.x,-ofs.y)) / textureSize(tex, 0))\n"
-    "		+ 0.25 * texture(tex, (gl_FragCoord.xy + vec2(ofs.y,-ofs.x)) / textureSize(tex, 0))\n"
+    "		+ 0.25 * texture(color_tex, (gl_FragCoord.xy + vec2(ofs.x,ofs.y)) / textureSize(color_tex, 0))\n"
+    "		+ 0.25 * texture(color_tex, (gl_FragCoord.xy + vec2(-ofs.y,ofs.x)) / textureSize(color_tex, 0))\n"
+    "		+ 0.25 * texture(color_tex, (gl_FragCoord.xy + vec2(-ofs.x,-ofs.y)) / textureSize(color_tex, 0))\n"
+    "		+ 0.25 * texture(color_tex, (gl_FragCoord.xy + vec2(ofs.y,-ofs.x)) / textureSize(color_tex, 0))\n"
     "	;\n"
 
     //Vignette effect (darken around edges)
-    "	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(tex, 0)) / textureSize(tex, 0);\n"
+    "	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(color_tex, 0)) / textureSize(color_tex, 0);\n"
     "	float tint_amt = max(0.0, length(at) * 0.7);\n"
     "	float tint_col = clamp(1.0 - tint_amt, 0.0, 1.0);\n"
     "	vec4 tint = vec4(tint_col, tint_col, tint_col, 1.0);\n"
     "	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n" //TODO
-    //"	fragColor = vec4(gl_FragCoord.z, 0.2, 0.2, 1.0);\n"
+    //"	fragColor = vec4(blur_amt, 0.2, 0.2, 1.0);\n"
     "}\n"
   );
 
   glUseProgram(program);
 
-  glUniform1i(glGetUniformLocation(program, "tex"), 0);
+  glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
+  glUniform1i(glGetUniformLocation(program, "depth_tex"), 1);
 
   glUseProgram(0);
 
@@ -708,10 +711,10 @@ struct Framebuffers {
 
 										//This framebuffer is used for fullscreen effects:
 	GLuint color_tex = 0;
-	GLuint depth_rb = 0;
+	GLuint depth_tex = 0;
 	GLuint fb = 0;
 
-	void allocate(glm::uvec2 const &new_size, glm::uvec2 const &new_shadow_size) {
+	void allocate(glm::uvec2 const &new_size) {
 		//allocate full-screen framebuffer:
 		if (size != new_size) {
 			size = new_size;
@@ -725,17 +728,23 @@ struct Framebuffers {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 			glBindTexture(GL_TEXTURE_2D, 0);
 
-			if (depth_rb == 0) glGenRenderbuffers(1, &depth_rb);
-			glBindRenderbuffer(GL_RENDERBUFFER, depth_rb);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size.x, size.y);
-			glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-			if (fb == 0) glGenFramebuffers(1, &fb);
-			glBindFramebuffer(GL_FRAMEBUFFER, fb);
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
-			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_rb);
-			check_fb();
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+      //create a depth-format texture:
+      if (depth_tex == 0) glGenTextures(1, &depth_tex);
+      glBindTexture(GL_TEXTURE_2D, depth_tex);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, size.x, size.y, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      
+      //to bind it to the framebuffer:
+      if (fb == 0) glGenFramebuffers(1, &fb);
+      glBindFramebuffer(GL_FRAMEBUFFER, fb);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tex, 0);
+      check_fb();
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			GL_ERRORS();
 		}
@@ -759,7 +768,7 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
     //fix aspect ratio of camera
     camera->aspect = drawable_size.x / float(drawable_size.y);
 
-	fbs.allocate(drawable_size, glm::uvec2(512, 512));
+	fbs.allocate(drawable_size);
 
 	//Draw scene to off-screen framebuffer:
 	glBindFramebuffer(GL_FRAMEBUFFER, fbs.fb);
@@ -801,9 +810,11 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 
 	GL_ERRORS();
 
-	//Copy scene from color buffer to screen, performing post-processing effects:
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
+	//Copy scene from depth/color buffers to screen, performing post-processing effects:
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, fbs.depth_tex);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
   
   //TODO: copy depth buffer somehow?
   //glBindRenderbuffer(GL_RENDERBUFFER, fbs.depth_rb);
