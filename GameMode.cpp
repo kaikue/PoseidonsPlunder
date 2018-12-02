@@ -117,8 +117,6 @@ Load< GLuint > nohit_program(LoadTagDefault, []() {
 		"uniform sampler2D depth_tex;\n"
     "out vec4 fragColor;\n"
     "void main() {\n"
-     //TODO: Add some antialiasing, maybe?
-
     //Depth of field- blur when further away
     " float depth = texelFetch(depth_tex, ivec2(gl_FragCoord.xy), 0).r;\n"
     "	float blur_amt = max((depth - 0.99) * 100, 0);\n"
@@ -719,46 +717,59 @@ struct Framebuffers {
 		//allocate full-screen framebuffer:
 		if (size != new_size) {
 			size = new_size;
+      int num_samples = 2;
+      
+      GL_ERRORS();
 
 			if (color_tex == 0) glGenTextures(1, &color_tex);
-			glBindTexture(GL_TEXTURE_2D, color_tex);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size.x, size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, color_tex);
+      glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, num_samples, GL_RGB, size.x, size.y, false);
+			/*glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);*/
+			glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+
+      GL_ERRORS();
 
       //create a depth-format texture:
       if (depth_tex == 0) glGenTextures(1, &depth_tex);
-      glBindTexture(GL_TEXTURE_2D, depth_tex);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, size.x, size.y, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      
+      glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, depth_tex);
+      glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, num_samples, GL_DEPTH_COMPONENT24, size.x, size.y, false);
+      /*glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D_MULTISAMPLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);*/
+      glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+
+      GL_ERRORS();
+
       //to bind it to the framebuffer:
       if (fb == 0) glGenFramebuffers(1, &fb);
       glBindFramebuffer(GL_FRAMEBUFFER, fb);
-      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
-      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tex, 0);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, color_tex, 0);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D_MULTISAMPLE, depth_tex, 0);
       check_fb();
       glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			GL_ERRORS();
 		}
+
+    GL_ERRORS();
 	}
 } fbs;
 
 void GameMode::draw(glm::uvec2 const &drawable_size)
 {
+
+    GL_ERRORS();
     //set up basic OpenGL state:
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    GL_ERRORS();
 
     // setup camera position
     glUseProgram(vertex_color_program->program);
@@ -766,16 +777,61 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
     glUniform3fv(vertex_color_program->view_pos_vec3, 1, glm::value_ptr(cam_pos_rot.first));
     glUseProgram(0);
 
+    GL_ERRORS();
+
     //fix aspect ratio of camera
     camera->aspect = drawable_size.x / float(drawable_size.y);
 
+  /*//antialiasing- from https://stackoverflow.com/questions/23526605/how-to-achieve-downsampling-aa-filtering-in-opengl
+  GLuint supersample_fbo,
+    supersample_tex,
+    supersample_rbo_depth;
+
+  glGenTextures(1, &supersample_tex);
+  glBindTexture(GL_TEXTURE_2D, supersample_tex);
+
+  glGenRenderbuffers(1, &supersample_rbo_depth);
+  glBindRenderbuffer(GL_RENDERBUFFER, supersample_rbo_depth);
+
+  // Allocate storage for your texture (scale X <res_x,res_y>)
+  int scale = 2;
+  glm::uint scale_x = drawable_size.x * scale;
+  glm::uint scale_y = drawable_size.y * scale;
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, scale_x, scale_y, 0, GL_RGBA, GL_FLOAT, NULL);
+
+  // Allocate storage for your depth buffer
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, scale_x, scale_y);
+
+  glGenFramebuffers(1, &supersample_fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, supersample_fbo);
+
+  // Attach your texture to the FBO: Color Attachment 0.
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, supersample_tex, 0);
+
+  // Attach the depth buffer to the FBO.
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, supersample_rbo_depth);
+  
+  glBindFramebuffer(GL_FRAMEBUFFER, supersample_fbo);
+
+  // You need to modify the viewport mapping to reflect the difference in size.
+  // Your projection matrix can stay the same since everything is uniformly scaled.
+  //
+  glViewport(0, 0, scale_x, scale_y);
+  */
+
+    GL_ERRORS();
+
 	fbs.allocate(drawable_size);
+
+  GL_ERRORS();
 
 	//Draw scene to off-screen framebuffer:
 	glBindFramebuffer(GL_FRAMEBUFFER, fbs.fb);
 	glViewport(0, 0, drawable_size.x, drawable_size.y);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
+  GL_ERRORS();
 
     scene->draw(camera);
 
@@ -803,8 +859,31 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
         }
     }
 
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, 0);
+    /*glBindFramebuffer(GL_READ_FRAMEBUFFER, supersample_fbo); // READ:  Supersampled
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);               // WRITE: Default
+
+    // Downsample the supersampled FBO using LINEAR interpolation
+    glBlitFramebuffer(0, 0, scale_x, scale_y,
+      0, 0, drawable_size.x, drawable_size.y,
+      GL_COLOR_BUFFER_BIT,
+      GL_LINEAR);
+    
+
+    // You probably want all subsequent drawing to go into the default framebuffer...
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, drawable_size.x, drawable_size.y);*/
+
+    GL_ERRORS();
+    
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbs.fb); // Make sure your multisampled FBO is the read framebuffer
+    glDrawBuffer(GL_BACK);                       // Set the back buffer as the draw buffer
+    glBlitFramebuffer(0, 0, drawable_size.x, drawable_size.y, 0, 0, drawable_size.x, drawable_size.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  
+    GL_ERRORS();
+
+	/*glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
 	glActiveTexture(GL_TEXTURE0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -813,10 +892,12 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 
 	//Copy scene from depth/color buffers to screen, performing post-processing effects:
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D, fbs.depth_tex);
+  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fbs.depth_tex);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, fbs.color_tex);
+  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fbs.color_tex);
   
+  GL_ERRORS();
+
   //TODO: copy depth buffer somehow?
   //glBindRenderbuffer(GL_RENDERBUFFER, fbs.depth_rb);
 
@@ -827,7 +908,10 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 
 	glUseProgram(0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+
+  GL_ERRORS();
+  */
 }
 
 void GameMode::show_pause_menu()
