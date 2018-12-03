@@ -4,12 +4,12 @@
 #You shouldn't need to change it.
 
 if $(OS) = NT { #Windows
-	C++FLAGS = /nologo /c /EHsc /W3 /WX /MD /I"kit-libs-win/out/include" /I"kit-libs-win/out/include/SDL2" /I"kit-libs-win/out/libpng" /I"bullet/src"
+	C++FLAGS = /nologo /c /Z7 /EHsc /W3 /WX /MD /I"kit-libs-win/out/include" /I"kit-libs-win/out/include/SDL2" /I"kit-libs-win/out/libpng" /I"bullet/src"
 		#disable a few warnings:
 		/wd4146 #-1U is still unsigned
 		/wd4297 #unforunately SDLmain is nothrow
 	;
-	LINKFLAGS = /nologo /SUBSYSTEM:CONSOLE
+	LINKFLAGS = /nologo /SUBSYSTEM:CONSOLE /DEBUG:FASTLINK
 		/LIBPATH:"kit-libs-win/out/lib"
 		/LIBPATH:"kit-libs-win/out/libpng"
 		/LIBPATH:"kit-libs-win/out/zlib"
@@ -75,6 +75,7 @@ CLIENT_NAMES =
 	main
 	compile_program
 	vertex_color_program
+	bone_vertex_color_program
 	texture_program
 	depth_program
 	Mode
@@ -85,6 +86,7 @@ CLIENT_NAMES =
 	draw_text
 	Sound
 	Skybox
+	BoneAnimation
 	;
 
 if $(OS) = NT {

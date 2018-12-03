@@ -11,6 +11,7 @@
 #include "draw_text.hpp" //helper to... um.. draw text
 #include "check_fb.hpp" //helper for checking currently bound OpenGL framebuffers
 #include "vertex_color_program.hpp"
+#include "bone_vertex_color_program.hpp"
 #include "load_save_png.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -173,6 +174,18 @@ static std::array<Scene::Transform *, 2> treasures_transform;
 
 static Scene *current_scene = nullptr;
 
+BoneAnimation::Animation const *player_banim_swim = nullptr;
+
+Load< BoneAnimation > player_banims(LoadTagDefault, [](){
+	auto ret = new BoneAnimation(data_path("test_level_complex.banim"));
+	player_banim_swim = &(ret->lookup("Swim"));
+	return ret;
+});
+
+Load< GLuint > player_banims_for_bone_vertex_color_program(LoadTagDefault, [](){
+	return new GLuint(player_banims->make_vao_for_program(bone_vertex_color_program->program));
+});
+
 Load< Sound::Sample > sound_loop(LoadTagDefault, [](){
 	return new Sound::Sample(data_path("loop.wav"));
 });
@@ -282,16 +295,39 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
 
     // only spawn player mesh if not its own
     if (player_id != id) {
+        // Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
+
+        // player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
+
+        // MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
+        // player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
+        // player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
+
+        // player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
+        // player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+
+        Scene::Object::ProgramInfo player_anim_info;
+		player_anim_info.program = bone_vertex_color_program->program;
+		player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
+		player_anim_info.start = player_banims->mesh.start;
+		player_anim_info.count = player_banims->mesh.count;
+		player_anim_info.mvp_mat4 = bone_vertex_color_program->object_to_clip_mat4;
+		player_anim_info.mv_mat4x3 = bone_vertex_color_program->object_to_light_mat4x3;
+		player_anim_info.itmv_mat3 = bone_vertex_color_program->normal_to_light_mat3;
+
+		player_animations.insert(std::make_pair(id, BoneAnimationPlayer(*player_banims, 
+                *player_banim_swim, BoneAnimationPlayer::Loop, 0.0f)));
+
+		BoneAnimationPlayer *player_anim_player = &player_animations.at(id);
+	
+		player_anim_info.set_uniforms = [player_anim_player](){
+			player_anim_player->set_uniform(bone_vertex_color_program->bones_mat4x3_array);
+		};
+        
+        // from orig:
         Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
 
-        player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
-
-        MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
-        player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
-        player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
-
-        player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
-        player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
+        player_obj->programs[Scene::Object::ProgramTypeDefault] = player_anim_info;
     }
 
     {
@@ -700,6 +736,28 @@ void GameMode::update(float elapsed)
             treasures_transform[team]->position = state.treasures[team].position;
         }
     }
+
+    {
+		float step = 0.0f;
+		if (controls.fwd) step += elapsed * 1.0f;
+		if (controls.back) step -= elapsed * 1.0f;
+		// player_anim->transform->position.y += step;
+		// player_animations[0].position -= step / 1.0f;
+		// player_animations[0].position -= std::floor(player_animations[0].position);
+        // if (player_animations.find(0) == player_animations.end()){
+        //     player_animations.at(0).position -= step / 1.0f;
+        //     player_animations.at(0).position -= std::floor(player_animations.at(0).position);
+        // }
+        // std::cout<<player_animations[0].position<<std::endl;
+        for (auto it = player_animations.begin(); it != player_animations.end(); it++){
+            it->second.position -= step / 1.0f;
+            it->second.position -= std::floor(it->second.position);
+        }
+	}
+
+    for (auto &anim : player_animations) {
+		anim.second.update(elapsed);
+}
 
 }
 

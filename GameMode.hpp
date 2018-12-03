@@ -9,6 +9,7 @@
 #include "Scene.hpp"
 #include "Skybox.hpp"
 #include "Sound.hpp"
+#include "BoneAnimation.hpp"
 
 #include <math.h>
 #include <SDL.h>
@@ -77,6 +78,7 @@ struct GameMode: public Mode
 
     Skybox underwater_skybox;
 
+    std::unordered_map< uint32_t, BoneAnimationPlayer > player_animations;
     //------ networking ------
     Client &client; //client object; manages connection to server.
 };
