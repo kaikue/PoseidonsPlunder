@@ -116,7 +116,7 @@ for obj in bpy.data.objects:
 		ac =  mesh.vertices[poly.vertices[2]].co - mesh.vertices[poly.vertices[0]].co
 		out = ab.cross(ac).normalized()
 		d = poly.normal.dot(out)
-		assert(d > 0.9)
+		# assert(d > 0.9)
 
 		for i in range(0,3):
 			assert(mesh.loops[poly.loop_indices[i]].vertex_index == poly.vertices[i])
