@@ -289,23 +289,13 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
     memcpy(&state.players[id].nickname, &nickname, Player::NICKNAME_LENGTH * sizeof(char));
     players_transform[id] = current_scene->new_transform();
     players_transform.at(id)->position = state.players.at(id).position;
-    players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    // players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+    players_transform.at(id)->rotation = glm::quat(glm::angleAxis(3.14f, glm::vec3(1.0f, 1.0f, 1.0f)));
 
     sound_loop->play(players_transform.at(player_id)->position, 1.0f, Sound::LoopOrOnce::Loop);
 
     // only spawn player mesh if not its own
     if (player_id != id) {
-        // Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
-
-        // player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
-
-        // MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
-        // player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
-        // player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
-
-        // player_obj->programs[Scene::Object::ProgramTypeShadow].start = mesh.start;
-        // player_obj->programs[Scene::Object::ProgramTypeShadow].count = mesh.count;
-
         Scene::Object::ProgramInfo player_anim_info;
 		player_anim_info.program = bone_vertex_color_program->program;
 		player_anim_info.vao = *player_banims_for_bone_vertex_color_program;
@@ -676,6 +666,10 @@ void GameMode::update(float elapsed)
         vel = lerp(vel, goalVel, FRICTION * elapsed);
 
         players_transform.at(player_id)->position += vel * elapsed;
+
+        for (auto const &pair : state.players) {
+            state.players.at(pair.first).velocity = vel;
+        }
     }
 
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;
@@ -738,26 +732,22 @@ void GameMode::update(float elapsed)
     }
 
     {
-		float step = 0.0f;
-		if (controls.fwd) step += elapsed * 1.0f;
-		if (controls.back) step -= elapsed * 1.0f;
-		// player_anim->transform->position.y += step;
-		// player_animations[0].position -= step / 1.0f;
-		// player_animations[0].position -= std::floor(player_animations[0].position);
-        // if (player_animations.find(0) == player_animations.end()){
-        //     player_animations.at(0).position -= step / 1.0f;
-        //     player_animations.at(0).position -= std::floor(player_animations.at(0).position);
-        // }
-        // std::cout<<player_animations[0].position<<std::endl;
+
+		// if (controls.back) step -= elapsed * 1.0f;
         for (auto it = player_animations.begin(); it != player_animations.end(); it++){
-            it->second.position -= step / 1.0f;
-            it->second.position -= std::floor(it->second.position);
+            uint32_t id = it->first;
+            if (id != player_id){
+                float vel = glm::length(state.players[id].velocity);
+                // std::cout<<glm::to_string(vel)<<std::endl;
+                it->second.position -= vel / 100.0f;
+                it->second.position -= std::floor(it->second.position);
+            }
         }
 	}
 
     for (auto &anim : player_animations) {
 		anim.second.update(elapsed);
-}
+    }
 
 }
 
