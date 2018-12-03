@@ -119,7 +119,7 @@ Load< GLuint > nohit_program(LoadTagDefault, []() {
     "void main() {\n"
     //Depth of field- blur when further away
     " float depth = texelFetch(depth_tex, ivec2(gl_FragCoord.xy), 0).r;\n"
-    "	float blur_amt = max((depth - 0.99) * 100, 0);\n"
+    "	float blur_amt = max((depth - 0.99) * 120, 0);\n"
     //pick a vector to move in for blur using function inspired by:
     //https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
     "	vec2 ofs = blur_amt * normalize(vec2(\n"
@@ -136,12 +136,12 @@ Load< GLuint > nohit_program(LoadTagDefault, []() {
 
     //Vignette effect (darken around edges)
     "	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(color_tex, 0)) / textureSize(color_tex, 0);\n"
-    "	float tint_amt = length(at) * 0.5;\n"
-    " if (depth < 0.6) tint_amt = 0;\n" //don't vignette text
+    "	float tint_amt = length(at) * 0.6;\n"
+    " if (depth < 0.58) tint_amt = 0;\n" //don't vignette text
     "	float tint_col = clamp(1.0 - tint_amt, 0.0, 1.0);\n"
     "	vec4 tint = vec4(tint_col, tint_col, tint_col, 1.0);\n"
-    //"	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n"
-    "	fragColor = vec4(0.1, blur_amt, 0.1, 1.0);\n" //sonar mode
+    "	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n"
+    //"	fragColor = vec4(0.1, blur_amt, 0.1, 1.0);\n" //sonar mode
     "}\n"
   );
 
