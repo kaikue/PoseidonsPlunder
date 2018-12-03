@@ -136,12 +136,12 @@ Load< GLuint > nohit_program(LoadTagDefault, []() {
 
     //Vignette effect (darken around edges)
     "	vec2 at = (gl_FragCoord.xy - 0.5 * textureSize(color_tex, 0)) / textureSize(color_tex, 0);\n"
-    "	float tint_amt = max(0.0, length(at) * 0.7);\n"
-    " if (depth < 0.6) tint_amt = 0;\n" //don't vignette text- 0.6 seems to be a good cutoff for text vs. world geometry
+    "	float tint_amt = length(at) * 0.5;\n"
+    " if (depth < 0.6) tint_amt = 0;\n" //don't vignette text
     "	float tint_col = clamp(1.0 - tint_amt, 0.0, 1.0);\n"
     "	vec4 tint = vec4(tint_col, tint_col, tint_col, 1.0);\n"
-    "	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n"
-    //"	fragColor = vec4(0.1, blur_amt, 0.1, 1.0);\n" //sonar mode
+    //"	fragColor = vec4(blur.rgb * tint.rgb, 1.0);\n"
+    "	fragColor = vec4(0.1, blur_amt, 0.1, 1.0);\n" //sonar mode
     "}\n"
   );
 
@@ -705,7 +705,7 @@ void GameMode::update(float elapsed)
 
 //GameMode will render to some offscreen framebuffer(s).
 //This code allocates and resizes them as needed:
-struct Framebuffers {
+struct AntialiasedFramebuffers {
 	glm::uvec2 size = glm::uvec2(0, 0); //remember the size of the framebuffer
 
 										//This framebuffer is used for fullscreen effects:
@@ -757,7 +757,60 @@ struct Framebuffers {
 
     GL_ERRORS();
 	}
-} fbs;
+} fbs_aa;
+
+struct Framebuffers {
+  glm::uvec2 size = glm::uvec2(0, 0); //remember the size of the framebuffer
+
+                    //This framebuffer is used for fullscreen effects:
+  GLuint color_tex = 0;
+  GLuint depth_tex = 0;
+  GLuint fb = 0;
+
+  void allocate(glm::uvec2 const &new_size) {
+    //allocate full-screen framebuffer:
+    if (size != new_size) {
+      size = new_size;
+
+      GL_ERRORS();
+
+      if (color_tex == 0) glGenTextures(1, &color_tex);
+      glBindTexture(GL_TEXTURE_2D, color_tex);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size.x, size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+
+      GL_ERRORS();
+
+      //create a depth-format texture:
+      if (depth_tex == 0) glGenTextures(1, &depth_tex);
+      glBindTexture(GL_TEXTURE_2D, depth_tex);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, size.x, size.y, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+      glBindTexture(GL_TEXTURE_2D, 0);
+
+      GL_ERRORS();
+
+      //to bind it to the framebuffer:
+      if (fb == 0) glGenFramebuffers(1, &fb);
+      glBindFramebuffer(GL_FRAMEBUFFER, fb);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color_tex, 0);
+      glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depth_tex, 0);
+      check_fb();
+      glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+      GL_ERRORS();
+    }
+
+    GL_ERRORS();
+  }
+} fbs_pp;
 
 void GameMode::draw(glm::uvec2 const &drawable_size)
 {
@@ -821,12 +874,13 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 
     GL_ERRORS();
 
-	fbs.allocate(drawable_size);
+	fbs_aa.allocate(drawable_size);
+	fbs_pp.allocate(drawable_size);
 
   GL_ERRORS();
 
-	//Draw scene to off-screen framebuffer:
-	glBindFramebuffer(GL_FRAMEBUFFER, fbs.fb);
+	//Draw scene to off-screen antialiasing framebuffer:
+	glBindFramebuffer(GL_FRAMEBUFFER, fbs_aa.fb);
 	glViewport(0, 0, drawable_size.x, drawable_size.y);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -874,16 +928,25 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
     glViewport(0, 0, drawable_size.x, drawable_size.y);*/
 
     GL_ERRORS();
-    
+
+    //Set up the post-processing frame buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, fbs_pp.fb);
+    glViewport(0, 0, drawable_size.x, drawable_size.y);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //Draw into the post-processing framebuffer from the antialiased one- https://www.khronos.org/opengl/wiki/Multisampling#Allocating_a_Multisample_Render_Target
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);   // Make sure no FBO is set as the draw framebuffer
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbs.fb); // Make sure your multisampled FBO is the read framebuffer
-    glDrawBuffer(GL_BACK);                       // Set the back buffer as the draw buffer
-    glBlitFramebuffer(0, 0, drawable_size.x, drawable_size.y, 0, 0, drawable_size.x, drawable_size.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbs_aa.fb); // Make sure your multisampled FBO is the read framebuffer
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbs_pp.fb); //Set the post-processing buffer as the draw buffer
+    glBlitFramebuffer(0, 0, drawable_size.x, drawable_size.y, 0, 0, drawable_size.x, drawable_size.y, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT, GL_NEAREST); //Blit using antialiasing
+
+    //TODO: copy the depth buffer???
   
     GL_ERRORS();
 
-	/*glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -892,14 +955,11 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 
 	//Copy scene from depth/color buffers to screen, performing post-processing effects:
   glActiveTexture(GL_TEXTURE1);
-  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fbs.depth_tex);
+  glBindTexture(GL_TEXTURE_2D, fbs_pp.depth_tex);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fbs.color_tex);
+  glBindTexture(GL_TEXTURE_2D, fbs_pp.color_tex);
   
   GL_ERRORS();
-
-  //TODO: copy depth buffer somehow?
-  //glBindRenderbuffer(GL_RENDERBUFFER, fbs.depth_rb);
 
 	glUseProgram(get_own_player().is_shot ? *hit_program : *nohit_program);
 	glBindVertexArray(*empty_vao);
@@ -908,10 +968,10 @@ void GameMode::draw(glm::uvec2 const &drawable_size)
 
 	glUseProgram(0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
   GL_ERRORS();
-  */
+  
 }
 
 void GameMode::show_pause_menu()
