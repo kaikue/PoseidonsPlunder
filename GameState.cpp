@@ -410,10 +410,20 @@ void GameState::update(float time)
             if (pair.second.has_treasure_1 || pair.second.has_treasure_2) {
                 pair.second.has_treasure_1 = false;
                 pair.second.has_treasure_2 = false;
+                std::cout << "giving up on the treasure" << std::endl;
                 for (uint32_t team = 0; team < num_teams; team++) {
                     if (treasures[team].held_by == pair.first) {
                         treasures[team].held_by = -1;
+                        if (team == 0) {
+                            treasure_0_is_dropping = true;
+                            // std::cout << "!!!!!!!!!! " << treasures[0].position[2] << std::endl;
+                        }
+                        if (team == 1) {
+                            treasure_1_is_dropping = true;
+                            // std::cout << "!!!!!!!!!! " << treasures[1].position[2] << std::endl;
+                        }
                     }
+
                 }
             }
             else {
