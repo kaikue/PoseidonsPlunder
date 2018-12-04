@@ -84,6 +84,7 @@ struct Scene {
 			//uniforms:
 			GLuint mvp_mat4 = -1U; //uniform index for object-to-clip matrix (mat4)
 			GLuint mv_mat4 = -1U; //uniform index for model-to-lighting-space matrix (mat4)
+			GLuint mv_mat4x3 = -1U; //uniform index for model-to-lighting-space matrix (mat4x3)
 			GLuint itmv_mat3 = -1U; //uniform index for normal-to-lighting-space matrix (mat3)
 			std::function< void() > set_uniforms; //(optional) function to set additional uniforms
 
