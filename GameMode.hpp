@@ -66,6 +66,7 @@ struct GameMode: public Mode
 	const float FRICTION = 2.5f; //how quickly the player starts/stops moving- higher value = more precise movement
 
     bool mouse_captured = false;
+    bool first_msg_received = false;
 
     uint32_t player_id;
     std::unordered_map<uint32_t, Scene::Transform *> players_transform;

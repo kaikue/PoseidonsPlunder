@@ -455,7 +455,6 @@ void GameMode::send_action(Connection *c)
         c->send('p'); //player update
         //send player ID? or use sockets completely?
         //movement
-
         glm::vec3 pos = get_own_player().position;
         glm::vec3 vel = get_own_player().velocity;
         glm::quat rot = get_own_player().rotation;
@@ -602,6 +601,9 @@ void GameMode::poll_server()
                                     //player_count * 20 floats for pos(3), vel(3), rot(4), harpoon pos(3), harpoon vel(3), harpoon rotation(4), plus 6 for two treasure pos(3)
                                     //player_count ints for harpoon states, plus 2 for two treasure held_by
                                     c->recv_buffer.erase(c->recv_buffer.begin(), c->recv_buffer.begin() + packet_len);
+
+                                    // set flag once player has recieved first info from the server
+                                    first_msg_received = true;
                                 }
                             }
                         }
@@ -649,7 +651,7 @@ void GameMode::update(float elapsed)
         glm::inverse(cam_to_player_rot) * glm::quat(glm::vec3(elevation, -azimuth, 0.0f));
 
     // send player action and position to server
-    if (client.connection) {
+    if (client.connection && first_msg_received) {
         send_action(&client.connection);
     }
     controls.fire = false;
