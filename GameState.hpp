@@ -204,6 +204,7 @@ private:
     static constexpr float harpoon_vel = 6.0f;
     static constexpr float treasure_spawn_radius = 1.0f;
     static constexpr float time_before_treasure_return = 15.0f;
+    static constexpr float player_shot_timeout = 5.0f;
     static constexpr float water_depth = 10.0f;
 
     // determines how close the player has to be to be able to grab the treasure
