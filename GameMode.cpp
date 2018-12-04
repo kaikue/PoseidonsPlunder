@@ -168,6 +168,8 @@ static std::string gun_mesh_name;
 static std::string harpoon_mesh_name;
 
 static std::string player_mesh_name;
+static std::string player_red_mesh_name;
+static std::string player_blue_mesh_name;
 
 static std::string rope_mesh_name;
 
@@ -209,8 +211,12 @@ Load<Scene> scene(LoadTagDefault, []()
             harpoon_mesh_name = m;
             return;
         }
-        if (t->name == "Player") {
-            player_mesh_name = m;
+        if (t->name == "Player_Red") {
+            player_red_mesh_name = m;
+            return;
+        }
+        if (t->name == "Player_Blue") {
+            player_blue_mesh_name = m;
             return;
         }
         if (t->name == "Rope") {
@@ -289,7 +295,12 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
         Scene::Object *player_obj = current_scene->new_object(players_transform[id]);
 
         player_obj->programs[Scene::Object::ProgramTypeDefault] = *vertex_color_program_info;
-
+        std::string player_mesh_name;
+        if (state.players[id].team == 0){ // red
+            player_mesh_name = player_red_mesh_name;
+        } else if (state.players[id].team == 1){ // blue
+            player_mesh_name = player_blue_mesh_name;
+        }
         MeshBuffer::Mesh const &mesh = meshes->lookup(player_mesh_name);
         player_obj->programs[Scene::Object::ProgramTypeDefault].start = mesh.start;
         player_obj->programs[Scene::Object::ProgramTypeDefault].count = mesh.count;
