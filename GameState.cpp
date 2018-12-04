@@ -298,7 +298,10 @@ void GameState::handle_harpoon_collision(const btCollisionObject *harpoon_obj,
             }
             else {
                 auto player = ((Player *) other_obj->getUserPointer());
+                auto player_id = other_obj->getUserIndex();
                 player->is_shot = true;
+                player_shot_timer.at(player_id) = 0.0f;
+
                 // harpoon retract since it hit another player
                 harpoon->state = 3;
             }
@@ -473,6 +476,12 @@ void GameState::update(float time)
                         treasure_1_is_dropping = true;
                     }
                 }
+            }
+
+            player_shot_timer.at(pair.first) += time;
+
+            if (player_shot_timer.at(pair.first) >= player_shot_timeout) {
+                pair.second.is_shot = false;
             }
         }
     }
