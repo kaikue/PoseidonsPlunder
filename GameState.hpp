@@ -236,11 +236,13 @@ private:
     btCollisionObject *treasure_collisions[2];
     btVector3 bounds_min, bounds_max;
     btTransform originalShift_tf = btTransform(btQuaternion(0.576f, 0.0f, 0.0f, 0.818f),
-      btVector3(0.0f, 0.0f, -0.85f));
-    btTransform correction_tf_t = btTransform(btQuaternion(0.576f, 0.0f, 0.0f, 0.818f),
-      btVector3(0.0f, 0.0f, 0.0f));
-      btTransform correction_tf_r = btTransform(btQuaternion(0.0f, 0.0f, 0.0f, 1.0f),
-        btVector3(0.0f, 0.0f, 0.85f));
+                                                btVector3(0.0f, 0.0f, -0.85f));
+    btTransform correction_tf_r = btTransform(btQuaternion(0.576f, 0.0f, 0.0f, 0.818f),
+                                              btVector3(0.0f, 0.0f, 0.0f));
+    btTransform correction_tf_t = btTransform(btQuaternion(0.0f, 0.0f, 0.0f, 1.0f),
+                                                btVector3(0.0f, 0.0f, 0.85f));
+    glm::vec3 position_shift = glm::vec3(0.0, 0.0, 0.85);
+    glm::quat rotation_shift = glm::quat(0.818f, 0.576f, 0.0f, 0.0f);
 
     enum class HarpoonCollision
     {

@@ -43,8 +43,8 @@ GameState::GameState()
         if (t->name == "Player") {
             auto *object = new btCollisionObject();
             object->setWorldTransform(
-                originalShift_tf * btTransform(btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
-                            btVector3(t->position.x, t->position.y, t->position.z)));
+                correction_tf_r * btTransform( btQuaternion(t->rotation.x, t->rotation.y, t->rotation.z, t->rotation.w),
+                            btVector3(t->position.x, t->position.y, t->position.z + 1.85)));
             auto *capsule = new btCapsuleShapeZ((btScalar) player_capsule_radius, (btScalar) player_capsule_height);
             object->setCollisionShape(capsule);
             bt_collision_world->addCollisionObject(object);
@@ -210,8 +210,9 @@ void GameState::add_player(uint32_t id, uint32_t team, std::string nickname)
     glm::vec3 player_at = team_spawns_pos[team];
 
     glm::vec3 position = player_at;
+    position += position_shift;
     glm::quat rotation = team_spawns_rot[team];
-
+    rotation = rotation_shift * rotation;
     players[id] =
         {position, glm::vec3(0.0f, 0.0f, 0.0f), rotation, static_cast<int>(team), false, false, false, false, false, nickname};
 
@@ -219,8 +220,8 @@ void GameState::add_player(uint32_t id, uint32_t team, std::string nickname)
     auto *player_object = new btCollisionObject();
     {
         player_object->setWorldTransform(
-            originalShift_tf * btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-                        btVector3(position.x, position.y, position.z)));
+             correction_tf_r * btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                        btVector3(position.x, position.y, position.z + 1.85)));
         auto *capsule = new btCapsuleShapeZ((btScalar) player_capsule_radius, (btScalar) player_capsule_height);
         player_object->setCollisionShape(capsule);
 
@@ -571,7 +572,7 @@ void GameState::update(float time)
 
         // first update player
         pair.second.first->setWorldTransform(
-             originalShift_tf * btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+             btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                         btVector3(position.x, position.y, position.z)));
 
         position = harpoons.at(pair.first).position;
@@ -579,7 +580,7 @@ void GameState::update(float time)
 
         // then update harpoon
         pair.second.second->setWorldTransform(
-             originalShift_tf * btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+             btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
                         btVector3(position.x, position.y, position.z)));
 
     }
