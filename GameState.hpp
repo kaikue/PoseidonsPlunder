@@ -199,11 +199,11 @@ public:
 
 private:
     // private game state members
-    static constexpr float dist_before_retract = 20.0f;
+    static constexpr float dist_before_retract = 15.0f;
     static constexpr float time_before_grab_retract = 1.0f;
-    static constexpr float harpoon_vel = 6.0f;
+    static constexpr float harpoon_vel = 12.0f;
     static constexpr float treasure_spawn_radius = 1.0f;
-    static constexpr float time_before_treasure_return = 15.0f;
+    static constexpr float time_before_treasure_return = 30.0f;
     static constexpr float player_shot_timeout = 5.0f;
     static constexpr float water_depth = 10.0f;
 

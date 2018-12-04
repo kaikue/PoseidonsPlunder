@@ -497,8 +497,6 @@ void GameState::update(float time)
                 get_transform(player_pos, player_rot) * treasure_offset_to_player;
             auto treasure_pos_rot = get_pos_rot(treasure_to_world);
 
-            std::cout << "treasure world pos: " << glm::to_string(treasure_pos_rot.first) << ", player pos: " << glm::to_string(player_pos) << std::endl;
-
             treasures[team].position = treasure_pos_rot.first;
             treasures[team].rotation = treasure_pos_rot.second;
 
