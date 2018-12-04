@@ -221,7 +221,6 @@ private:
     // bullet related members
     static constexpr double scene_size = 500;
     static constexpr unsigned int max_objects = 16000;
-    static constexpr double player_sphere_radius = 0.9;
     static constexpr double player_capsule_radius = 0.25;
     static constexpr double player_capsule_height = 0.9;
     static constexpr double harpoon_length = 0.5;
@@ -236,6 +235,12 @@ private:
     std::unordered_map<uint32_t, std::pair<btCollisionObject *, btCollisionObject *>> player_collisions;
     btCollisionObject *treasure_collisions[2];
     btVector3 bounds_min, bounds_max;
+    btTransform originalShift_tf = btTransform(btQuaternion(0.576f, 0.0f, 0.0f, 0.818f),
+      btVector3(0.0f, 0.0f, -0.85f));
+    btTransform correction_tf_t = btTransform(btQuaternion(0.576f, 0.0f, 0.0f, 0.818f),
+      btVector3(0.0f, 0.0f, 0.0f));
+      btTransform correction_tf_r = btTransform(btQuaternion(0.0f, 0.0f, 0.0f, 1.0f),
+        btVector3(0.0f, 0.0f, 0.85f));
 
     enum class HarpoonCollision
     {
