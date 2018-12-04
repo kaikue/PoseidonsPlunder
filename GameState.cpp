@@ -568,11 +568,21 @@ void GameState::update(float time)
     for (auto const &pair : player_collisions) {
         glm::vec3 position = players.at(pair.first).position;
         glm::quat rotation = players.at(pair.first).rotation;
+        uint32_t team = players.at(pair.first).team;
 
         // first update player
-        pair.second.first->setWorldTransform(
-            btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
-                        btVector3(position.x, position.y, position.z)));
+        if (team==0){ // red
+            pair.second.first->setWorldTransform(
+                // btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                btTransform(btQuaternion(btVector3(0.0f, 1.0f, 0.0f), btScalar(-1.2f)),
+                            btVector3(position.x, position.y, btScalar(1.0f+position.z))));
+        } else {
+            pair.second.first->setWorldTransform(
+                // btTransform(btQuaternion(rotation.x, rotation.y, rotation.z, rotation.w),
+                btTransform(btQuaternion(btVector3(0.0f, 1.0f, 0.0f), btScalar(1.2f)),
+                            btVector3(position.x, position.y, btScalar(0.85f+position.z))));
+        }
+
 
         position = harpoons.at(pair.first).position;
         rotation = harpoons.at(pair.first).rotation;

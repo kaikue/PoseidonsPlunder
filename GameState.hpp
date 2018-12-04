@@ -222,8 +222,8 @@ private:
     static constexpr double scene_size = 500;
     static constexpr unsigned int max_objects = 16000;
     static constexpr double player_sphere_radius = 0.9;
-    static constexpr double player_capsule_radius = 0.25;
-    static constexpr double player_capsule_height = 0.9;
+    static constexpr double player_capsule_radius = 0.2;
+    static constexpr double player_capsule_height = 1.2;
     static constexpr double harpoon_length = 0.5;
     static constexpr double harpoon_radius = 0.01;
 
