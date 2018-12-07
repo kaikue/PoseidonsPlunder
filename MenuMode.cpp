@@ -75,7 +75,7 @@ Load< GLuint > fade_program(LoadTagInit, [](){
 bool MenuMode::handle_event(SDL_Event const &e, glm::uvec2 const &window_size) {
 	if (e.type == SDL_KEYDOWN) {
 		if (e.key.keysym.sym == SDLK_ESCAPE) {
-			Mode::set_current(nullptr);
+			Mode::set_current(background);
 			return true;
 		} else if (e.key.keysym.sym == SDLK_UP) {
 			//find previous selectable thing that isn't selected:

@@ -459,8 +459,8 @@ bool GameMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
     }
     else if (mouse_captured) {
         if (evt.type == SDL_KEYDOWN && evt.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-            //SDL_SetRelativeMouseMode(SDL_FALSE);
-            //mouse_captured = false;
+            SDL_SetRelativeMouseMode(SDL_FALSE);
+            mouse_captured = false;
             show_pause_menu();
             return true;
         }
