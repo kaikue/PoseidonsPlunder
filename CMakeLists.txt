@@ -69,9 +69,9 @@ add_custom_target(CopyAssets
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/test_level_complex.collision ${CMAKE_BINARY_DIR}/
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/names_first.txt ${CMAKE_BINARY_DIR}/
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/names_second.txt ${CMAKE_BINARY_DIR}/
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/music.wav ${CMAKE_BINARY_DIR}/
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/dist/loop.wav ${CMAKE_BINARY_DIR}/
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/dist/textures ${CMAKE_BINARY_DIR}/textures
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/dist/sfx ${CMAKE_BINARY_DIR}/sfx
 )
 
 add_executable(client ${COMMON} ${CLIENT_FILES})
