@@ -1,6 +1,7 @@
 #pragma once
 #define _ENABLE_EXTENDED_ALIGNED_STORAGE
 #include "Mode.hpp"
+#include "Sound.hpp"
 
 #include "MeshBuffer.hpp"
 #include "GL.hpp"
@@ -78,6 +79,8 @@ struct GameMode: public Mode
     float azimuth, elevation;
 
     Skybox underwater_skybox;
+
+    std::shared_ptr< Sound::PlayingSample > swim_sound;
 
     std::unordered_map< uint32_t, BoneAnimationPlayer > player_animations;
     //------ networking ------

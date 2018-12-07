@@ -182,6 +182,16 @@ Load<Sound::Sample> sound_loop(LoadTagDefault, []()
     return new Sound::Sample(data_path("loop.wav"));
 });
 
+Load<Sound::Sample> sound_shoot(LoadTagDefault, []()
+{
+  return new Sound::Sample(data_path("sfx/shoot.wav"));
+});
+
+Load<Sound::Sample> sound_swim(LoadTagDefault, []()
+{
+  return new Sound::Sample(data_path("sfx/swim.wav"));
+});
+
 Load<Scene> scene(LoadTagDefault, []()
 {
     Scene *ret = new Scene;
@@ -288,7 +298,8 @@ void GameMode::spawn_player(uint32_t id, int team, std::string nickname)
     // players_transform.at(id)->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     players_transform.at(id)->rotation = glm::quat(glm::angleAxis(3.14f, glm::vec3(1.0f, 1.0f, 1.0f)));
 
-    sound_loop->play(players_transform.at(player_id)->position, 1.0f, Sound::LoopOrOnce::Loop);
+    sound_loop->play(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f, Sound::LoopOrOnce::Loop);
+    swim_sound = sound_swim->play(glm::vec3(0.0f, 0.0f, 0.0f), 0.0f, Sound::LoopOrOnce::Loop);
 
     // only spawn player mesh if not its own
     if (player_id != id) {
@@ -640,9 +651,16 @@ void GameMode::update(float elapsed)
 
         players_transform.at(player_id)->position += vel * elapsed;
 
-        for (auto const &pair : state.players) {
+        /*for (auto const &pair : state.players) {
             state.players.at(pair.first).velocity = vel;
-        }
+        }*/
+        get_own_player().velocity = vel;
+    }
+    float swim_vol = std::max(std::min(glm::length(get_own_player().velocity) / GameState::default_player_speed, 1.0f), 0.0f);
+    swim_sound->set_volume(swim_vol);
+
+    if (controls.fire && state.harpoons.at(player_id).state == 0) {
+      std::shared_ptr<Sound::PlayingSample> shoot_sound = sound_shoot->play(glm::vec3(0.0f, 0.0f, 0.0f), 0.2f, Sound::LoopOrOnce::Once);
     }
 
     static glm::quat cam_to_player_rot = get_pos_rot(state.camera_offset_to_player).second;

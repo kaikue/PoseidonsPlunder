@@ -24,9 +24,7 @@ Server movement validation:
 - Put the built files into PoseidonsPlunder/bullet/build, and the source (headers) into PoseidonsPlunder/bullet/src
 - Or just use Kai's prebuilt bullet: https://www.dropbox.com/s/9bh7d5jfm2hbtxq/bullet.zip?dl=0
 
-## TODO
-- remove cout's
-- make everything use Translation struct and sizeof()
-	- send harpoon rotations
-	- static_assert its size somewhere
-- add/send right click to grapple control
+## Credits
+- Developed by Edward Terry, Eric Fang, I-Chen Jwo, and Kai Kuehner
+- Harpoon sound by Bird_man: https://freesound.org/people/Bird_man/sounds/275151/
+- Swim sound by monica137142: https://freesound.org/people/monica137142/sounds/211389/

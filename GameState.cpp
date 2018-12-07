@@ -396,13 +396,13 @@ void GameState::update(float time)
     for (auto &pair : players) {
         glm::vec3 current_dir = glm::normalize(glm::toMat3(pair.second.rotation)[1]);
 
-        // player cannot shoot harpoon if they have treasure or if shot
+        // player cannot shoot harpoon if they have treasure or if shot or if harpoon is already shot
         if (pair.second.shot_harpoon && !pair.second.has_treasure_1 && !pair.second.has_treasure_2
-            && !pair.second.is_shot) {
+            && !pair.second.is_shot && harpoons.at(pair.first).state == 0) {
             harpoons.at(pair.first).state = 1;
             harpoons.at(pair.first).velocity = current_dir * harpoon_vel;
-            pair.second.shot_harpoon = false;
         }
+        pair.second.shot_harpoon = false;
 
         if (pair.second.grab) {
 
